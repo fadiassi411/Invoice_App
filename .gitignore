@@ -1,0 +1,13 @@
+bin/
+obj/
+outputs/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.zip
+*.log
+.vs/
+TestResults/

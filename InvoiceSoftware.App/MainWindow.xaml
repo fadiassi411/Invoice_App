@@ -1,0 +1,341 @@
+<Window x:Class="InvoiceSoftware.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:InvoiceSoftware.App.Converters"
+        Title="Invoice Management Software"
+        Width="1320" Height="860" MinWidth="1120" MinHeight="720"
+        Background="{StaticResource BackgroundBrush}">
+    <Window.Resources>
+        <conv:SectionVisibilityConverter x:Key="SectionVisibility" />
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="Background" Value="#153D70" />
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="6" />
+            <Setter Property="BorderBrush" Value="#DFE7F3" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style x:Key="DashboardPaymentBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Background" Value="#FEE2E2" />
+            <Setter Property="BorderBrush" Value="#FCA5A5" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding PaymentStatus}" Value="Paid">
+                    <Setter Property="Background" Value="#DCFCE7" />
+                    <Setter Property="BorderBrush" Value="#86EFAC" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PaymentStatus}" Value="PartiallyPaid">
+                    <Setter Property="Background" Value="#FEF3C7" />
+                    <Setter Property="BorderBrush" Value="#FCD34D" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PaymentStatus}" Value="Overpaid">
+                    <Setter Property="Background" Value="#DBEAFE" />
+                    <Setter Property="BorderBrush" Value="#93C5FD" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="DashboardPaymentBadgeText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#991B1B" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding PaymentStatus}" Value="Paid">
+                    <Setter Property="Foreground" Value="#166534" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PaymentStatus}" Value="PartiallyPaid">
+                    <Setter Property="Foreground" Value="#92400E" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PaymentStatus}" Value="Overpaid">
+                    <Setter Property="Foreground" Value="#1E40AF" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#0D2B68" Padding="16">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top">
+                    <Image Source="{Binding Company.LogoPath}" Height="64" Stretch="Uniform" Margin="0,0,0,16" />
+                    <TextBlock Text="{Binding Company.CompanyName}" Foreground="White" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="Invoice Management" Foreground="#A9C7E8" Margin="0,4,0,16" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Sections}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource NavButton}" Content="{Binding}" Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Column="1" Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBox Width="240" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search invoices by reference or customer" />
+                    <Button Content="Search" Command="{Binding RefreshCommand}" />
+                    <Button Content="New Invoice" Command="{Binding NewInvoiceCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding SelectedSection}" FontSize="26" FontWeight="SemiBold" Foreground="#0D2B68" VerticalAlignment="Center" />
+            </DockPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Dashboard}">
+                        <UniformGrid Columns="4">
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Total invoices" /><TextBlock Text="{Binding Snapshot.TotalInvoices}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Created today" /><TextBlock Text="{Binding Snapshot.InvoicesToday}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Monthly sales" /><TextBlock Text="{Binding Snapshot.MonthlySales, StringFormat=N2}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Outstanding" /><TextBlock Text="{Binding Snapshot.OutstandingAmount, StringFormat=N2}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Paid" /><TextBlock Text="{Binding Snapshot.PaidInvoices}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Partial" /><TextBlock Text="{Binding Snapshot.PartiallyPaidInvoices}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Unpaid" /><TextBlock Text="{Binding Snapshot.UnpaidInvoices}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Overdue" /><TextBlock Text="{Binding Snapshot.OverdueInvoices}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
+                        </UniformGrid>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Recent invoices" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <DataGrid ItemsSource="{Binding Snapshot.RecentInvoices}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceNumber}" Width="140" />
+                                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerNameSnapshot}" Width="*" />
+                                        <DataGridTextColumn Header="Date" Binding="{Binding InvoiceDate, StringFormat=d}" Width="100" />
+                                        <DataGridTextColumn Header="Total" Binding="{Binding GrandTotal, StringFormat=N2}" Width="110" />
+                                        <DataGridTemplateColumn Header="Payment" Width="130">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource DashboardPaymentBadge}">
+                                                        <TextBlock Text="{Binding PaymentStatus}" Style="{StaticResource DashboardPaymentBadgeText}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=New Invoice}">
+                        <Border Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Customer" FontWeight="SemiBold" />
+                                    <ComboBox ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}" DisplayMemberPath="Name" />
+                                    <TextBlock Text="Invoice #" FontWeight="SemiBold" />
+                                    <TextBox Text="{Binding SelectedInvoice.ReferenceNumber}" IsReadOnly="True" FontWeight="SemiBold" Background="#F3F7FC" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Invoice date" FontWeight="SemiBold" />
+                                    <DatePicker SelectedDate="{Binding SelectedInvoice.InvoiceDate}" />
+                                    <TextBlock Text="Due date" FontWeight="SemiBold" />
+                                    <DatePicker SelectedDate="{Binding SelectedInvoice.DueDate}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Payment method" FontWeight="SemiBold" />
+                                    <TextBox Text="{Binding SelectedInvoice.PaymentMethod}" />
+                                    <TextBlock Text="Notes" FontWeight="SemiBold" />
+                                    <TextBox Text="{Binding SelectedInvoice.Notes}" Height="64" TextWrapping="Wrap" AcceptsReturn="True" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <ComboBox Width="260" ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}" DisplayMemberPath="Description" />
+                                        <Button Content="Add Row" Command="{Binding AddInvoiceRowCommand}" />
+                                        <Button Content="Save Invoice" Command="{Binding SaveInvoiceCommand}" />
+                                    </StackPanel>
+                                    <TextBlock Text="Invoice items" FontSize="18" FontWeight="SemiBold" />
+                                </DockPanel>
+                                <DataGrid ItemsSource="{Binding InvoiceItems}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="#" Binding="{Binding SortOrder}" Width="45" />
+                                        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" />
+                                        <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="70" />
+                                        <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="70" />
+                                        <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice}" Width="90" />
+                                        <DataGridTextColumn Header="Disc %" Binding="{Binding DiscountPercentage}" Width="80" />
+                                        <DataGridTextColumn Header="Tax %" Binding="{Binding TaxPercentage}" Width="80" />
+                                        <DataGridTemplateColumn Header="Action" Width="90">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Remove" Command="{Binding DataContext.RemoveInvoiceRowCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Invoices}">
+                        <Border Style="{StaticResource Card}">
+                            <DataGrid ItemsSource="{Binding Invoices}" SelectedItem="{Binding SelectedInvoice}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceNumber}" Width="130" />
+                                    <DataGridTextColumn Header="Customer" Binding="{Binding CustomerNameSnapshot}" Width="*" />
+                                    <DataGridTextColumn Header="Date" Binding="{Binding InvoiceDate, StringFormat=d}" Width="100" />
+                                    <DataGridTextColumn Header="Due" Binding="{Binding DueDate, StringFormat=d}" Width="100" />
+                                    <DataGridTextColumn Header="Total" Binding="{Binding GrandTotal, StringFormat=N2}" Width="100" />
+                                    <DataGridTextColumn Header="Paid" Binding="{Binding AmountPaid, StringFormat=N2}" Width="100" />
+                                    <DataGridTextColumn Header="Balance" Binding="{Binding RemainingBalance, StringFormat=N2}" Width="100" />
+                                    <DataGridTextColumn Header="Status" Binding="{Binding PaymentStatus}" Width="110" />
+                                    <DataGridTemplateColumn Header="Actions" Width="610">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Button Content="Invoice PDF" Command="{Binding DataContext.ExportInvoicePdfCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                    <Button Content="Invoice Print" Command="{Binding DataContext.PrintInvoiceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                    <Button Content="Create Receipt" Command="{Binding DataContext.CreateReceiptCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                    <Button Content="Receipt PDF" Command="{Binding DataContext.ExportReceiptForInvoiceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                    <Button Content="Paid" Command="{Binding DataContext.MarkPaidCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                    <Button Content="Delete" Command="{Binding DataContext.DeleteInvoiceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Customers}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Add Customer" Command="{Binding AddCustomerCommand}" />
+                            <Button Content="Save Customer" Command="{Binding SaveCustomerCommand}" />
+                            <Button Content="Delete Customer" Command="{Binding DeleteCustomerCommand}" Background="#B91C1C" />
+                        </StackPanel>
+                        <Border Style="{StaticResource Card}">
+                            <DataGrid ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}" AutoGenerateColumns="True" />
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Products and Services}">
+                        <Button Content="Add Product / Service" Command="{Binding AddProductCommand}" HorizontalAlignment="Left" />
+                        <Border Style="{StaticResource Card}">
+                            <DataGrid ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}" AutoGenerateColumns="True" />
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Receipts}">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Receipts" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="Create receipts from the invoice list. Linked receipts update invoice payment status automatically." TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <DataGrid ItemsSource="{Binding Receipts}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceNumber}" Width="140" />
+                                        <DataGridTextColumn Header="Date" Binding="{Binding ReceiptDate, StringFormat=d}" Width="100" />
+                                        <DataGridTextColumn Header="Customer" Binding="{Binding Customer.Name}" Width="*" />
+                                        <DataGridTextColumn Header="Invoice" Binding="{Binding Invoice.ReferenceNumber}" Width="140" />
+                                        <DataGridTextColumn Header="Amount" Binding="{Binding PaymentAmount, StringFormat=N2}" Width="100" />
+                                        <DataGridTextColumn Header="Method" Binding="{Binding PaymentMethod}" Width="120" />
+                                        <DataGridTemplateColumn Header="Actions" Width="250">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button Content="Receipt PDF" Command="{Binding DataContext.ExportReceiptPdfCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                        <Button Content="Receipt Print" Command="{Binding DataContext.PrintReceiptCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Reports}">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Sales and tax summary" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Snapshot.MonthlySales, StringFormat=Monthly sales: {0:N2}}" Margin="0,8,0,0" />
+                                <TextBlock Text="{Binding Snapshot.PaymentsReceived, StringFormat=Payments received: {0:N2}}" />
+                                <TextBlock Text="{Binding Snapshot.OutstandingAmount, StringFormat=Outstanding balance: {0:N2}}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Backup and Restore}">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Create a zip backup of the database, company settings, logo, and saved assets." Margin="0,0,0,6" />
+                                <TextBlock Text="Restore replaces the current data from a backup file and creates a safety backup first." Margin="0,0,0,14" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Create Backup" Command="{Binding BackupCommand}" />
+                                    <Button Content="Restore Backup" Command="{Binding RestoreCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Company Settings}">
+                        <Border Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Company name" /><TextBox Text="{Binding Company.CompanyName}" />
+                                    <TextBlock Text="Contact person / owner name" /><TextBox Text="{Binding Company.ContactPersonName}" />
+                                    <TextBlock Text="Address" /><TextBox Text="{Binding Company.Address}" />
+                                    <TextBlock Text="Telephone" /><TextBox Text="{Binding Company.Telephone}" />
+                                    <TextBlock Text="Mobile" /><TextBox Text="{Binding Company.Mobile}" />
+                                    <TextBlock Text="Email" /><TextBox Text="{Binding Company.Email}" />
+                                    <TextBlock Text="Website" /><TextBox Text="{Binding Company.Website}" />
+                                    <TextBlock Text="Logo" /><TextBox Text="{Binding Company.LogoPath}" />
+                                    <Button Content="Choose Logo" Command="{Binding ChooseLogoCommand}" HorizontalAlignment="Left" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Tax ID" /><TextBox Text="{Binding Company.TaxIdentificationNumber}" />
+                                    <TextBlock Text="Commercial registration" /><TextBox Text="{Binding Company.CommercialRegistrationNumber}" />
+                                    <TextBlock Text="Currency" /><TextBox Text="{Binding Company.Currency}" />
+                                    <TextBlock Text="Currency symbol" /><TextBox Text="{Binding Company.CurrencySymbol}" />
+                                    <TextBlock Text="Default tax %" /><TextBox Text="{Binding Company.DefaultTaxPercentage}" />
+                                    <TextBlock Text="Invoice prefix" /><TextBox Text="{Binding Company.InvoicePrefix}" />
+                                    <TextBlock Text="Receipt prefix" /><TextBox Text="{Binding Company.ReceiptPrefix}" />
+                                    <TextBlock Text="Footer notes" /><TextBox Text="{Binding Company.InvoiceFooterNotes}" />
+                                    <TextBlock Text="Payment terms" /><TextBox Text="{Binding Company.PaymentTerms}" />
+                                    <Button Content="Save Company Settings" Command="{Binding SaveCompanyCommand}" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Application Settings}">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Database location" FontWeight="SemiBold" />
+                                <TextBlock Text="Stored in the current user's local application data folder." />
+                                <TextBlock Text="Localization resources are separated so Arabic/right-to-left support can be added later." Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+            <Border Grid.Row="2" Background="White" BorderBrush="#DFE7F3" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,12,0,0">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="#0D2B68" />
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
