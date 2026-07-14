@@ -38,10 +38,12 @@ public sealed class InvoiceItem : BaseEntity
     public int SortOrder { get; set; }
     public int? ProductId { get; set; }
     public Product? Product { get; set; }
+    public string? ProductReferenceSnapshot { get; set; }
     public string Description { get; set; } = "";
     public decimal Quantity { get; set; } = 1m;
     public string Unit { get; set; } = "ea";
     public decimal UnitPrice { get; set; }
+    public decimal CostPriceSnapshot { get; set; }
     public decimal DiscountPercentage { get; set; }
     public decimal TaxPercentage { get; set; }
     public decimal LineSubtotal { get; set; }

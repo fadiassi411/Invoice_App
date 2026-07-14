@@ -15,6 +15,12 @@ public sealed class DashboardService(InvoiceDbContext db) : IDashboardService
         var monthlySales = (await invoices.Where(x => x.InvoiceDate >= monthStart).Select(x => x.GrandTotal).ToListAsync(cancellationToken)).Sum();
         var outstandingAmount = (await invoices.Select(x => x.RemainingBalance).ToListAsync(cancellationToken)).Sum();
         var paymentsReceived = (await receipts.Select(x => x.PaymentAmount).ToListAsync(cancellationToken)).Sum();
+        var products = db.Products.AsNoTracking().Where(x => x.IsActive);
+        var activeProducts = await products.CountAsync(cancellationToken);
+        var quantities = await products.Where(x => x.TrackStock).Select(x => new { x.CurrentQuantity, x.CostPrice }).ToListAsync(cancellationToken);
+        var todayItems = await db.InvoiceItems.AsNoTracking()
+            .Where(x => x.Invoice != null && x.Invoice.Status == InvoiceStatus.Finalized && x.Invoice.InvoiceDate.Date == today)
+            .Select(x => new { x.Quantity, x.UnitPrice, x.CostPriceSnapshot }).ToListAsync(cancellationToken);
 
         return new DashboardSnapshot(
             await invoices.CountAsync(cancellationToken),
@@ -27,6 +33,13 @@ public sealed class DashboardService(InvoiceDbContext db) : IDashboardService
             outstandingAmount,
             paymentsReceived,
             await invoices.Include(x => x.Customer).OrderByDescending(x => x.InvoiceDate).Take(8).ToListAsync(cancellationToken),
-            await receipts.Include(x => x.Customer).OrderByDescending(x => x.ReceiptDate).Take(8).ToListAsync(cancellationToken));
+            await receipts.Include(x => x.Customer).OrderByDescending(x => x.ReceiptDate).Take(8).ToListAsync(cancellationToken),
+            activeProducts,
+            quantities.Sum(x => x.CurrentQuantity),
+            quantities.Sum(x => x.CurrentQuantity * x.CostPrice),
+            await products.CountAsync(x => x.TrackStock && x.CurrentQuantity > 0 && x.CurrentQuantity <= x.MinimumQuantity, cancellationToken),
+            await products.CountAsync(x => x.TrackStock && x.CurrentQuantity <= 0, cancellationToken),
+            todayItems.Sum(x => x.Quantity * x.UnitPrice),
+            todayItems.Sum(x => x.Quantity * (x.UnitPrice - x.CostPriceSnapshot)));
     }
 }

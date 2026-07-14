@@ -20,7 +20,7 @@ public sealed class LookupService(InvoiceDbContext db) : ILookupService
         => db.Customers.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync(cancellationToken);
 
     public Task<List<Product>> GetProductsAsync(CancellationToken cancellationToken = default)
-        => db.Products.OrderBy(x => x.Description).ToListAsync(cancellationToken);
+        => db.Products.Where(x => x.IsActive).OrderBy(x => x.Name).ThenBy(x => x.Description).ToListAsync(cancellationToken);
 
     public async Task<Customer> AddCustomerAsync(Customer customer, CancellationToken cancellationToken = default)
     {
@@ -56,6 +56,7 @@ public sealed class LookupService(InvoiceDbContext db) : ILookupService
     {
         if (string.IsNullOrWhiteSpace(product.Code)) throw new InvalidOperationException("Product code is required.");
         if (string.IsNullOrWhiteSpace(product.Description)) throw new InvalidOperationException("Product description is required.");
+        if (string.IsNullOrWhiteSpace(product.Name)) product.Name = product.Description;
         if (product.SellingPrice < 0) throw new InvalidOperationException("Selling price cannot be negative.");
         db.Products.Add(product);
         await db.SaveChangesAsync(cancellationToken);

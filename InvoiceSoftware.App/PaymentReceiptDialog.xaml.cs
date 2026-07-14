@@ -6,19 +6,25 @@ namespace InvoiceSoftware.App;
 
 public partial class PaymentReceiptDialog : Window
 {
-    private readonly decimal _remainingBalance;
+    private readonly decimal _maximumAmount;
+    private readonly bool _recordExistingPayment;
     private readonly string _currencySymbol;
 
-    public PaymentReceiptDialog(Invoice invoice, string currencySymbol)
+    public PaymentReceiptDialog(Invoice invoice, string currencySymbol, bool recordExistingPayment = false)
     {
         InitializeComponent();
-        _remainingBalance = invoice.RemainingBalance;
+        _recordExistingPayment = recordExistingPayment;
+        _maximumAmount = recordExistingPayment ? invoice.AmountPaid : invoice.RemainingBalance;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
 
         InvoiceSummary = $"Invoice {invoice.ReferenceNumber} - {invoice.CustomerNameSnapshot}";
-        BalanceSummary = $"Remaining balance: {_currencySymbol} {_remainingBalance:N2}";
-        PaymentAmountText = _remainingBalance.ToString("N2", CultureInfo.CurrentCulture);
-        Notes = $"Down payment for invoice {invoice.ReferenceNumber}";
+        BalanceSummary = recordExistingPayment
+            ? $"Payment already recorded: {_currencySymbol} {invoice.AmountPaid:N2}"
+            : $"Remaining balance: {_currencySymbol} {invoice.RemainingBalance:N2}";
+        PaymentAmountText = _maximumAmount.ToString("N2", CultureInfo.CurrentCulture);
+        Notes = recordExistingPayment
+            ? $"Receipt for payment already recorded on invoice {invoice.ReferenceNumber}"
+            : $"Down payment for invoice {invoice.ReferenceNumber}";
         DataContext = this;
     }
 
@@ -30,6 +36,7 @@ public partial class PaymentReceiptDialog : Window
     public string? TransactionReference { get; set; }
     public string? Notes { get; set; }
     public decimal PaymentAmount { get; private set; }
+    public bool IsPaymentAmountReadOnly => _recordExistingPayment;
 
     private void Create_Click(object sender, RoutedEventArgs e)
     {
@@ -46,9 +53,15 @@ public partial class PaymentReceiptDialog : Window
             return;
         }
 
-        if (amount > _remainingBalance)
+        if (amount > _maximumAmount)
         {
-            MessageBox.Show($"Payment amount cannot be greater than the remaining balance ({_currencySymbol} {_remainingBalance:N2}).", "Invalid amount", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show($"Payment amount cannot be greater than {_currencySymbol} {_maximumAmount:N2}.", "Invalid amount", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (_recordExistingPayment && amount != _maximumAmount)
+        {
+            MessageBox.Show("The receipt amount must match the payment already recorded on the invoice.", "Invalid amount", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 

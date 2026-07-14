@@ -91,13 +91,13 @@ public sealed class BackupService(InvoiceDbContext db) : IBackupService
 
     private async Task<string?> CreateDatabaseBackupCopyAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(DatabasePaths.DatabaseFile)) return null;
-
-        var tempFolder = Path.Combine(DatabasePaths.AppDataFolder, "Temp");
+        var connection = db.Database.GetDbConnection();
+        var sourceDatabase = Path.GetFullPath(connection.DataSource);
+        if (!File.Exists(sourceDatabase)) return null;
+        var tempFolder = Path.Combine(Path.GetDirectoryName(sourceDatabase)!, "Temp");
         Directory.CreateDirectory(tempFolder);
         var tempDatabase = Path.Combine(tempFolder, $"invoice-software-{Guid.NewGuid():N}.db");
 
-        var connection = db.Database.GetDbConnection();
         var openedHere = connection.State != ConnectionState.Open;
         if (openedHere)
             await db.Database.OpenConnectionAsync(cancellationToken);

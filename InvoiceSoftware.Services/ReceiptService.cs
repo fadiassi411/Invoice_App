@@ -56,4 +56,41 @@ public sealed class ReceiptService(InvoiceDbContext db, IReferenceNumberService 
         receipt.Customer = await db.Customers.FindAsync([invoice.CustomerId], cancellationToken);
         return receipt;
     }
+
+    public async Task<Receipt> CreateForRecordedPaymentAsync(int invoiceId, PaymentMethodType paymentMethod, string? transactionReference, string? notes = null, CancellationToken cancellationToken = default)
+    {
+        var settings = await db.CompanySettings.FirstAsync(cancellationToken);
+        var invoice = await db.Invoices.Include(x => x.Items).Include(x => x.Receipts).FirstAsync(x => x.Id == invoiceId, cancellationToken);
+        calculator.Calculate(invoice);
+        if (invoice.AmountPaid <= 0 || invoice.RemainingBalance > 0)
+            throw new InvalidOperationException("A recorded-payment receipt can only be created for a fully paid invoice.");
+        if (invoice.Receipts.Count != 0)
+            throw new InvalidOperationException("A receipt already exists for this invoice.");
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var receipt = new Receipt
+        {
+            ReferenceNumber = await references.GenerateAsync(SequenceKind.Receipt, cancellationToken),
+            CustomerId = invoice.CustomerId,
+            InvoiceId = invoice.Id,
+            PaymentAmount = invoice.AmountPaid,
+            PaymentMethod = paymentMethod,
+            TransactionReference = transactionReference,
+            Notes = notes,
+            ReceivedBy = settings.ContactPersonName
+        };
+
+        db.Receipts.Add(receipt);
+        db.AuditLogs.Add(new AuditLog
+        {
+            Action = "CreateReceiptForRecordedPayment",
+            EntityName = nameof(Receipt),
+            Details = $"{receipt.ReferenceNumber} for already-paid invoice {invoice.ReferenceNumber}"
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        receipt.Invoice = invoice;
+        receipt.Customer = await db.Customers.FindAsync([invoice.CustomerId], cancellationToken);
+        return receipt;
+    }
 }

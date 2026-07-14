@@ -12,6 +12,7 @@ public static class ServiceRegistration
         services.AddScoped<IInvoiceService, InvoiceService>();
         services.AddScoped<IReceiptService, ReceiptService>();
         services.AddScoped<ILookupService, LookupService>();
+        services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IBackupService, BackupService>();
         return services;

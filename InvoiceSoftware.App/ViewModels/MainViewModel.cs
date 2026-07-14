@@ -3,6 +3,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Documents;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Text;
 using InvoiceSoftware.App;
 using InvoiceSoftware.Core.Models;
 using InvoiceSoftware.Data;
@@ -19,6 +23,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IReceiptService _receipts;
     private readonly IDashboardService _dashboard;
     private readonly IBackupService _backup;
+    private readonly IInventoryService _inventory;
     private readonly IInvoicePdfService _pdf;
 
     private string _selectedSection = "Dashboard";
@@ -29,8 +34,20 @@ public sealed class MainViewModel : ObservableObject
     private Product? _selectedProduct;
     private Invoice? _selectedInvoice;
     private DashboardSnapshot? _snapshot;
+    private Product? _inventoryProduct;
+    private Category? _selectedCategoryFilter;
+    private Supplier? _selectedSupplierFilter;
+    private string _inventorySearchText = "";
+    private string _inventoryActiveFilter = "All";
+    private bool _lowStockOnly;
+    private decimal _inventoryQuantityInput;
+    private string _stockAdjustmentNotes = "";
+    private Category? _selectedCategory;
+    private Supplier? _selectedSupplier;
+    private DateTime? _reportFrom = DateTime.Today.AddMonths(-1);
+    private DateTime? _reportTo = DateTime.Today;
 
-    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf)
+    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory)
     {
         _lookup = lookup;
         _invoices = invoices;
@@ -38,26 +55,35 @@ public sealed class MainViewModel : ObservableObject
         _dashboard = dashboard;
         _backup = backup;
         _pdf = pdf;
+        _inventory = inventory;
 
-        Sections = ["Dashboard", "New Invoice", "Invoices", "Customers", "Products and Services", "Receipts", "Reports", "Backup and Restore", "Company Settings", "Application Settings"];
+        Sections = ["Dashboard", "New Invoice", "Invoices", "Customers", "Store / Inventory", "Inventory Reports", "Products and Services", "Receipts", "Reports", "Backup and Restore", "Company Settings", "Application Settings"];
         Customers = [];
         Products = [];
         InvoiceItems = [];
         Invoices = [];
         Receipts = [];
+        InventoryProducts = [];
+        Categories = [];
+        Suppliers = [];
+        StockMovements = [];
+        CurrentStockReport = [];
+        SalesProfitReport = [];
+        LowStockReport = [];
 
         NavigateCommand = new RelayCommand<string>(NavigateAsync);
         RefreshCommand = new RelayCommand(RefreshAsync);
         NewInvoiceCommand = new RelayCommand(CreateInvoiceAsync);
         AddInvoiceRowCommand = new RelayCommand(AddInvoiceRowAsync);
+        SelectProductCommand = new RelayCommand(SelectProductAsync);
         RemoveInvoiceRowCommand = new RelayCommand<InvoiceItem>(RemoveInvoiceRowAsync);
         SaveInvoiceCommand = new RelayCommand(SaveInvoiceAsync);
-        DeleteInvoiceCommand = new RelayCommand<Invoice>(DeleteInvoiceAsync);
-        MarkPaidCommand = new RelayCommand<Invoice>(MarkPaidAsync);
+        DeleteInvoiceCommand = new RelayCommand<Invoice>(DeleteInvoiceAsync, invoice => invoice is not null);
+        MarkPaidCommand = new RelayCommand<Invoice>(MarkPaidAsync, invoice => invoice is not null && invoice.PaymentStatus is not PaymentStatus.Paid and not PaymentStatus.Overpaid);
         ExportInvoicePdfCommand = new RelayCommand<Invoice>(ExportInvoicePdfAsync);
         PrintInvoiceCommand = new RelayCommand<Invoice>(PrintInvoiceAsync);
-        CreateReceiptCommand = new RelayCommand<Invoice>(CreateReceiptAsync);
-        ExportReceiptForInvoiceCommand = new RelayCommand<Invoice>(ExportReceiptForInvoiceAsync);
+        CreateReceiptCommand = new RelayCommand<Invoice>(CreateReceiptAsync, CanCreateReceipt);
+        ExportReceiptForInvoiceCommand = new RelayCommand<Invoice>(ExportReceiptForInvoiceAsync, invoice => invoice?.Receipts.Count > 0);
         ExportReceiptPdfCommand = new RelayCommand<Receipt>(ExportReceiptPdfAsync);
         PrintReceiptCommand = new RelayCommand<Receipt>(PrintReceiptAsync);
         AddCustomerCommand = new RelayCommand(AddCustomerAsync);
@@ -68,6 +94,23 @@ public sealed class MainViewModel : ObservableObject
         ChooseLogoCommand = new RelayCommand(ChooseLogoAsync);
         BackupCommand = new RelayCommand(BackupAsync);
         RestoreCommand = new RelayCommand(RestoreAsync);
+        NewInventoryProductCommand = new RelayCommand(NewInventoryProductAsync);
+        SaveInventoryProductCommand = new RelayCommand(SaveInventoryProductAsync);
+        DeleteInventoryProductCommand = new RelayCommand(DeleteInventoryProductAsync);
+        DuplicateInventoryProductCommand = new RelayCommand(DuplicateInventoryProductAsync);
+        ClearInventoryProductCommand = new RelayCommand(NewInventoryProductAsync);
+        SearchInventoryCommand = new RelayCommand(RefreshInventoryAsync);
+        ViewStockHistoryCommand = new RelayCommand(ViewStockHistoryAsync);
+        ExportProductsCsvCommand = new RelayCommand(ExportProductsCsvAsync);
+        ImportProductsCsvCommand = new RelayCommand(ImportProductsCsvAsync);
+        PrintProductsCommand = new RelayCommand(PrintProductsAsync);
+        NewCategoryCommand = new RelayCommand(NewCategoryAsync);
+        SaveCategoryCommand = new RelayCommand(SaveCategoryAsync);
+        NewSupplierCommand = new RelayCommand(NewSupplierAsync);
+        SaveSupplierCommand = new RelayCommand(SaveSupplierAsync);
+        RefreshReportsCommand = new RelayCommand(RefreshReportsAsync);
+        ExportStockReportCommand = new RelayCommand(ExportStockReportAsync);
+        ExportProfitReportCommand = new RelayCommand(ExportProfitReportAsync);
         _ = RefreshAsync();
     }
 
@@ -77,11 +120,20 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<Invoice> Invoices { get; }
     public ObservableCollection<InvoiceItem> InvoiceItems { get; }
     public ObservableCollection<Receipt> Receipts { get; }
+    public ObservableCollection<Product> InventoryProducts { get; }
+    public ObservableCollection<Category> Categories { get; }
+    public ObservableCollection<Supplier> Suppliers { get; }
+    public ObservableCollection<StockMovement> StockMovements { get; }
+    public ObservableCollection<CurrentStockReportRow> CurrentStockReport { get; }
+    public ObservableCollection<SalesProfitReportRow> SalesProfitReport { get; }
+    public ObservableCollection<CurrentStockReportRow> LowStockReport { get; }
+    public string[] ActiveFilters { get; } = ["All", "Active", "Inactive"];
 
     public ICommand NavigateCommand { get; }
     public ICommand RefreshCommand { get; }
     public ICommand NewInvoiceCommand { get; }
     public ICommand AddInvoiceRowCommand { get; }
+    public ICommand SelectProductCommand { get; }
     public ICommand RemoveInvoiceRowCommand { get; }
     public ICommand SaveInvoiceCommand { get; }
     public ICommand DeleteInvoiceCommand { get; }
@@ -100,6 +152,23 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ChooseLogoCommand { get; }
     public ICommand BackupCommand { get; }
     public ICommand RestoreCommand { get; }
+    public ICommand NewInventoryProductCommand { get; }
+    public ICommand SaveInventoryProductCommand { get; }
+    public ICommand DeleteInventoryProductCommand { get; }
+    public ICommand DuplicateInventoryProductCommand { get; }
+    public ICommand ClearInventoryProductCommand { get; }
+    public ICommand SearchInventoryCommand { get; }
+    public ICommand ViewStockHistoryCommand { get; }
+    public ICommand ExportProductsCsvCommand { get; }
+    public ICommand ImportProductsCsvCommand { get; }
+    public ICommand PrintProductsCommand { get; }
+    public ICommand NewCategoryCommand { get; }
+    public ICommand SaveCategoryCommand { get; }
+    public ICommand NewSupplierCommand { get; }
+    public ICommand SaveSupplierCommand { get; }
+    public ICommand RefreshReportsCommand { get; }
+    public ICommand ExportStockReportCommand { get; }
+    public ICommand ExportProfitReportCommand { get; }
 
     public string SelectedSection { get => _selectedSection; set => SetProperty(ref _selectedSection, value); }
     public string StatusMessage { get => _statusMessage; set => SetProperty(ref _statusMessage, value); }
@@ -120,6 +189,29 @@ public sealed class MainViewModel : ObservableObject
         }
     }
     public DashboardSnapshot? Snapshot { get => _snapshot; set => SetProperty(ref _snapshot, value); }
+    public Product? InventoryProduct
+    {
+        get => _inventoryProduct;
+        set
+        {
+            if (SetProperty(ref _inventoryProduct, value))
+            {
+                InventoryQuantityInput = value?.CurrentQuantity ?? 0;
+                StockAdjustmentNotes = "";
+            }
+        }
+    }
+    public Category? SelectedCategoryFilter { get => _selectedCategoryFilter; set => SetProperty(ref _selectedCategoryFilter, value); }
+    public Supplier? SelectedSupplierFilter { get => _selectedSupplierFilter; set => SetProperty(ref _selectedSupplierFilter, value); }
+    public string InventorySearchText { get => _inventorySearchText; set => SetProperty(ref _inventorySearchText, value); }
+    public string InventoryActiveFilter { get => _inventoryActiveFilter; set => SetProperty(ref _inventoryActiveFilter, value); }
+    public bool LowStockOnly { get => _lowStockOnly; set => SetProperty(ref _lowStockOnly, value); }
+    public decimal InventoryQuantityInput { get => _inventoryQuantityInput; set => SetProperty(ref _inventoryQuantityInput, value); }
+    public string StockAdjustmentNotes { get => _stockAdjustmentNotes; set => SetProperty(ref _stockAdjustmentNotes, value); }
+    public Category? SelectedCategory { get => _selectedCategory; set => SetProperty(ref _selectedCategory, value); }
+    public Supplier? SelectedSupplier { get => _selectedSupplier; set => SetProperty(ref _selectedSupplier, value); }
+    public DateTime? ReportFrom { get => _reportFrom; set => SetProperty(ref _reportFrom, value); }
+    public DateTime? ReportTo { get => _reportTo; set => SetProperty(ref _reportTo, value); }
 
     private async Task NavigateAsync(string? section)
     {
@@ -140,6 +232,8 @@ public sealed class MainViewModel : ObservableObject
             await Replace(Invoices, await _invoices.SearchAsync(SearchText, null, null));
             await Replace(Receipts, await _receipts.GetReceiptsAsync());
             Snapshot = await _dashboard.GetSnapshotAsync();
+            await RefreshInventoryAsync();
+            if (SelectedSection == "Inventory Reports") await RefreshReportsAsync();
             StatusMessage = "Data refreshed.";
         }
         catch (Exception ex)
@@ -175,15 +269,25 @@ public sealed class MainViewModel : ObservableObject
         {
             SortOrder = InvoiceItems.Count + 1,
             ProductId = product?.Id,
+            ProductReferenceSnapshot = product?.Code,
             Description = product?.Description ?? "Custom item",
             Unit = product?.Unit ?? "ea",
             Quantity = 1,
             UnitPrice = product?.SellingPrice ?? 0,
+            CostPriceSnapshot = product?.CostPrice ?? 0,
             TaxPercentage = product?.TaxPercentage ?? Company.DefaultTaxPercentage
         };
         SelectedInvoice.Items.Add(item);
         InvoiceItems.Add(item);
         StatusMessage = "Invoice row added.";
+    }
+
+    private async Task SelectProductAsync()
+    {
+        var dialog = new ProductSelectionDialog(Products.Where(x => x.IsActive).ToList()) { Owner = Application.Current.MainWindow };
+        if (dialog.ShowDialog() != true || dialog.SelectedProduct is null) return;
+        SelectedProduct = dialog.SelectedProduct;
+        await AddInvoiceRowAsync();
     }
 
     private Task RemoveInvoiceRowAsync(InvoiceItem? item)
@@ -206,6 +310,11 @@ public sealed class MainViewModel : ObservableObject
             }
 
             SelectedInvoice.Items = InvoiceItems.ToList();
+            if (InvoiceItems.Any(x => x.ProductId is not null && x.UnitPrice < Products.FirstOrDefault(p => p.Id == x.ProductId)?.CostPrice))
+            {
+                if (MessageBox.Show("One or more invoice prices are below cost price. Save anyway?", "Below-cost warning", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+            }
+            SelectedInvoice.Status = InvoiceStatus.Finalized;
             await _invoices.SaveAsync(SelectedInvoice);
             await RefreshAsync();
             StatusMessage = $"Invoice {SelectedInvoice.ReferenceNumber} saved.";
@@ -216,9 +325,27 @@ public sealed class MainViewModel : ObservableObject
     private async Task DeleteInvoiceAsync(Invoice? invoice)
     {
         if (invoice is null) return;
-        if (MessageBox.Show($"Delete invoice {invoice.ReferenceNumber}? It can be recovered from deleted records.", "Confirm delete", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        await _invoices.SoftDeleteAsync(invoice.Id);
-        await RefreshAsync();
+        var confirmation = new InvoiceDeleteConfirmationDialog(invoice.ReferenceNumber)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        if (confirmation.ShowDialog() != true)
+        {
+            StatusMessage = $"Deletion of {invoice.ReferenceNumber} cancelled.";
+            return;
+        }
+
+        try
+        {
+            await _invoices.SoftDeleteAsync(invoice.Id);
+            await RefreshAsync();
+            StatusMessage = $"Invoice {invoice.ReferenceNumber} deleted.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not delete {invoice.ReferenceNumber}: {ex.Message}";
+            MessageBox.Show(ex.Message, "Invoice deletion failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task MarkPaidAsync(Invoice? invoice)
@@ -254,13 +381,16 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             if (invoice is null) return;
-            if (invoice.RemainingBalance <= 0)
+            var recordsExistingPayment = invoice.RemainingBalance <= 0 && invoice.AmountPaid > 0 && invoice.Receipts.Count == 0;
+            if (invoice.RemainingBalance <= 0 && !recordsExistingPayment)
             {
-                StatusMessage = $"Invoice {invoice.ReferenceNumber} is already paid. No receipt can be created for a zero balance.";
+                StatusMessage = invoice.Receipts.Count > 0
+                    ? $"Invoice {invoice.ReferenceNumber} already has a receipt."
+                    : $"Invoice {invoice.ReferenceNumber} has no recorded payment to receipt.";
                 return;
             }
 
-            var dialog = new PaymentReceiptDialog(invoice, Company.CurrencySymbol)
+            var dialog = new PaymentReceiptDialog(invoice, Company.CurrencySymbol, recordsExistingPayment)
             {
                 Owner = Application.Current.MainWindow
             };
@@ -270,7 +400,9 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
-            var receipt = await _receipts.CreateForInvoiceAsync(invoice.Id, dialog.PaymentAmount, dialog.PaymentMethod, dialog.TransactionReference, dialog.Notes);
+            var receipt = recordsExistingPayment
+                ? await _receipts.CreateForRecordedPaymentAsync(invoice.Id, dialog.PaymentMethod, dialog.TransactionReference, dialog.Notes)
+                : await _receipts.CreateForInvoiceAsync(invoice.Id, dialog.PaymentAmount, dialog.PaymentMethod, dialog.TransactionReference, dialog.Notes);
             Receipts.Add(receipt);
             SelectedSection = "Receipts";
             await RefreshAsync();
@@ -279,9 +411,12 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = ex.Message;
-            MessageBox.Show(ex.Message, "Receipt PDF failed", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(ex.Message, "Receipt creation failed", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
+
+    private static bool CanCreateReceipt(Invoice? invoice)
+        => invoice is not null && (invoice.RemainingBalance > 0 || (invoice.AmountPaid > 0 && invoice.Receipts.Count == 0));
 
     private async Task ExportReceiptForInvoiceAsync(Invoice? invoice)
     {
@@ -484,6 +619,178 @@ public sealed class MainViewModel : ObservableObject
             StatusMessage = $"Restore failed: {ex.Message}";
             MessageBox.Show(ex.Message, "Restore failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private Task NewInventoryProductAsync()
+    {
+        InventoryProduct = new Product
+        {
+            Unit = "Piece", TaxPercentage = Company.DefaultTaxPercentage, TrackStock = true,
+            IsActive = true, Type = ProductType.Product
+        };
+        InventoryQuantityInput = 0;
+        StatusMessage = "Enter the new product details. Required fields are marked with *.";
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshInventoryAsync()
+    {
+        var active = InventoryActiveFilter switch { "Active" => true, "Inactive" => false, _ => (bool?)null };
+        await Replace(InventoryProducts, await _inventory.SearchProductsAsync(InventorySearchText, SelectedCategoryFilter?.Id, SelectedSupplierFilter?.Id, active, LowStockOnly));
+        await Replace(Categories, await _inventory.GetCategoriesAsync());
+        await Replace(Suppliers, await _inventory.GetSuppliersAsync());
+        if (InventoryProduct is not null && InventoryProduct.Id != 0)
+            InventoryProduct = InventoryProducts.FirstOrDefault(x => x.Id == InventoryProduct.Id);
+    }
+
+    private async Task SaveInventoryProductAsync()
+    {
+        try
+        {
+            if (InventoryProduct is null) { await NewInventoryProductAsync(); return; }
+            var quantityChanged = InventoryProduct.Id == 0 || InventoryQuantityInput != InventoryProduct.CurrentQuantity;
+            if (InventoryProduct.Id != 0 && quantityChanged && string.IsNullOrWhiteSpace(StockAdjustmentNotes))
+                throw new InvalidOperationException("Enter a reason for the stock adjustment.");
+            var saved = await _inventory.SaveProductAsync(InventoryProduct, quantityChanged ? InventoryQuantityInput : null, StockAdjustmentNotes);
+            await RefreshInventoryAsync();
+            InventoryProduct = InventoryProducts.FirstOrDefault(x => x.Id == saved.Id);
+            await Replace(Products, await _lookup.GetProductsAsync());
+            StatusMessage = $"Product {saved.Code} saved.";
+        }
+        catch (Exception ex) { StatusMessage = ex.Message; MessageBox.Show(ex.Message, "Product validation", MessageBoxButton.OK, MessageBoxImage.Warning); }
+    }
+
+    private async Task DeleteInventoryProductAsync()
+    {
+        if (InventoryProduct is null || InventoryProduct.Id == 0) return;
+        if (MessageBox.Show($"Delete product '{InventoryProduct.Code} - {InventoryProduct.Name}'?", "Confirm product deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try { await _inventory.DeleteProductAsync(InventoryProduct.Id); StatusMessage = "Product deleted."; }
+        catch (InvalidOperationException ex) { StatusMessage = ex.Message; MessageBox.Show(ex.Message, "Product retained", MessageBoxButton.OK, MessageBoxImage.Information); }
+        await RefreshInventoryAsync();
+        await Replace(Products, await _lookup.GetProductsAsync());
+        InventoryProduct = null;
+    }
+
+    private async Task DuplicateInventoryProductAsync()
+    {
+        if (InventoryProduct is null || InventoryProduct.Id == 0) return;
+        var copy = await _inventory.DuplicateProductAsync(InventoryProduct.Id);
+        await RefreshInventoryAsync();
+        InventoryProduct = InventoryProducts.FirstOrDefault(x => x.Id == copy.Id);
+        StatusMessage = $"Product duplicated as {copy.Code}.";
+    }
+
+    private async Task ViewStockHistoryAsync()
+    {
+        await Replace(StockMovements, await _inventory.GetMovementsAsync(InventoryProduct?.Id));
+        StatusMessage = InventoryProduct is null ? "Showing all stock movements." : $"Showing stock history for {InventoryProduct.Code}.";
+    }
+
+    private async Task NewCategoryAsync() { SelectedCategory = new Category { IsActive = true }; Categories.Add(SelectedCategory); await Task.CompletedTask; }
+    private async Task SaveCategoryAsync()
+    {
+        if (SelectedCategory is null) return;
+        await _inventory.SaveCategoryAsync(SelectedCategory); await RefreshInventoryAsync(); StatusMessage = "Category saved.";
+    }
+    private async Task NewSupplierAsync() { SelectedSupplier = new Supplier { IsActive = true }; Suppliers.Add(SelectedSupplier); await Task.CompletedTask; }
+    private async Task SaveSupplierAsync()
+    {
+        if (SelectedSupplier is null) return;
+        await _inventory.SaveSupplierAsync(SelectedSupplier); await RefreshInventoryAsync(); StatusMessage = "Supplier saved.";
+    }
+
+    private async Task ExportProductsCsvAsync()
+    {
+        var dialog = new SaveFileDialog { Filter = "CSV file (*.csv)|*.csv", FileName = $"products-{DateTime.Today:yyyyMMdd}.csv" };
+        if (dialog.ShowDialog() != true) return;
+        var rows = new List<string> { "ReferenceNumber,Barcode,ProductName,Description,Category,Brand,Supplier,Unit,CostPrice,SellingPrice,TaxRate,Quantity,MinimumStock,ReorderQuantity,StorageLocation,ShelfBin,Status,TrackStock,Notes" };
+        rows.AddRange(InventoryProducts.Select(x => string.Join(',', new[]
+        {
+            x.Code, x.Barcode, x.Name, x.Description, x.CategoryRecord?.Name ?? x.Category, x.Brand, x.Supplier?.CompanyName,
+            x.Unit, x.CostPrice.ToString(System.Globalization.CultureInfo.InvariantCulture), x.SellingPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            x.TaxPercentage.ToString(System.Globalization.CultureInfo.InvariantCulture), x.CurrentQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            x.MinimumQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture), x.ReorderQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            x.StorageLocation, x.ShelfBinNumber, x.IsActive ? "Active" : "Inactive", x.TrackStock ? "Yes" : "No", x.Notes
+        }.Select(Csv))));
+        await File.WriteAllLinesAsync(dialog.FileName, rows, Encoding.UTF8); StatusMessage = $"Products exported to {dialog.FileName}.";
+    }
+
+    private async Task ImportProductsCsvAsync()
+    {
+        var dialog = new OpenFileDialog { Filter = "CSV file (*.csv)|*.csv" };
+        if (dialog.ShowDialog() != true) return;
+        var lines = await File.ReadAllLinesAsync(dialog.FileName);
+        if (lines.Length < 2) throw new InvalidOperationException("The CSV file contains no product rows.");
+        var header = ParseCsv(lines[0]).Select((name, index) => (name, index)).ToDictionary(x => x.name.Trim(), x => x.index, StringComparer.OrdinalIgnoreCase);
+        string Cell(string[] cells, string name) => header.TryGetValue(name, out var i) && i < cells.Length ? cells[i].Trim() : "";
+        decimal Number(string value) => decimal.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : 0;
+        var categories = (await _inventory.GetCategoriesAsync()).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+        var suppliers = (await _inventory.GetSuppliersAsync()).ToDictionary(x => x.CompanyName, StringComparer.OrdinalIgnoreCase);
+        var imported = 0;
+        foreach (var line in lines.Skip(1).Where(x => !string.IsNullOrWhiteSpace(x)))
+        {
+            var cells = ParseCsv(line);
+            var code = Cell(cells, "ReferenceNumber");
+            if (string.IsNullOrWhiteSpace(code)) continue;
+            var existing = (await _inventory.SearchProductsAsync(code)).FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            var product = existing ?? new Product();
+            product.Code = code; product.Barcode = Cell(cells, "Barcode"); product.Name = Cell(cells, "ProductName");
+            product.Description = Cell(cells, "Description"); product.Brand = Cell(cells, "Brand"); product.Unit = Cell(cells, "Unit");
+            var categoryName = Cell(cells, "Category");
+            if (!string.IsNullOrWhiteSpace(categoryName))
+            {
+                if (!categories.TryGetValue(categoryName, out var category)) { category = await _inventory.SaveCategoryAsync(new Category { Name = categoryName, IsActive = true }); categories[categoryName] = category; }
+                product.CategoryId = category.Id; product.Category = category.Name;
+            }
+            var supplierName = Cell(cells, "Supplier");
+            if (!string.IsNullOrWhiteSpace(supplierName))
+            {
+                if (!suppliers.TryGetValue(supplierName, out var supplier)) { supplier = await _inventory.SaveSupplierAsync(new Supplier { CompanyName = supplierName, IsActive = true }); suppliers[supplierName] = supplier; }
+                product.SupplierId = supplier.Id;
+            }
+            product.CostPrice = Number(Cell(cells, "CostPrice")); product.SellingPrice = Number(Cell(cells, "SellingPrice"));
+            product.TaxPercentage = Number(Cell(cells, "TaxRate")); product.MinimumQuantity = Number(Cell(cells, "MinimumStock"));
+            product.ReorderQuantity = Number(Cell(cells, "ReorderQuantity")); product.StorageLocation = Cell(cells, "StorageLocation");
+            product.ShelfBinNumber = Cell(cells, "ShelfBin"); product.IsActive = !Cell(cells, "Status").Equals("Inactive", StringComparison.OrdinalIgnoreCase);
+            product.TrackStock = !Cell(cells, "TrackStock").Equals("No", StringComparison.OrdinalIgnoreCase); product.Notes = Cell(cells, "Notes");
+            var quantity = Number(Cell(cells, "Quantity"));
+            await _inventory.SaveProductAsync(product, quantity, "CSV import"); imported++;
+        }
+        await RefreshInventoryAsync(); await Replace(Products, await _lookup.GetProductsAsync()); StatusMessage = $"Imported {imported} product(s).";
+    }
+
+    private async Task PrintProductsAsync()
+    {
+        var document = new FlowDocument { PagePadding = new Thickness(40), FontFamily = new FontFamily("Segoe UI"), FontSize = 10 };
+        document.Blocks.Add(new Paragraph(new Run($"{Company.CompanyName} - Product List")) { FontSize = 18, FontWeight = FontWeights.Bold });
+        var table = new Table { CellSpacing = 0 }; foreach (var width in new[] { 90d, 160d, 90d, 70d, 70d, 70d }) table.Columns.Add(new TableColumn { Width = new GridLength(width) });
+        var group = new TableRowGroup(); table.RowGroups.Add(group);
+        void Row(params string[] values) { var row = new TableRow(); foreach (var value in values) row.Cells.Add(new TableCell(new Paragraph(new Run(value))) { BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(.5), Padding = new Thickness(3) }); group.Rows.Add(row); }
+        Row("Reference", "Product", "Category", "Sell Price", "Quantity", "Status");
+        foreach (var x in InventoryProducts) Row(x.Code, x.Name, x.CategoryRecord?.Name ?? x.Category ?? "", x.SellingPrice.ToString("N2"), x.CurrentQuantity.ToString("N4"), x.IsActive ? "Active" : "Inactive");
+        document.Blocks.Add(table); var dialog = new PrintDialog(); if (dialog.ShowDialog() == true) dialog.PrintDocument(((IDocumentPaginatorSource)document).DocumentPaginator, "Product List"); await Task.CompletedTask;
+    }
+
+    private async Task RefreshReportsAsync()
+    {
+        await Replace(CurrentStockReport, await _inventory.GetCurrentStockReportAsync());
+        await Replace(LowStockReport, await _inventory.GetCurrentStockReportAsync(true));
+        await Replace(SalesProfitReport, await _inventory.GetSalesProfitReportAsync(ReportFrom, ReportTo));
+        StatusMessage = "Inventory reports refreshed.";
+    }
+    private Task ExportStockReportAsync() => ExportReportAsync("current-stock", "Product,ReferenceNumber,Quantity,CostPrice,SellingPrice,TotalCostValue,PotentialSellingValue,StorageLocation", CurrentStockReport.Select(x => string.Join(',', new[] { x.Product, x.ReferenceNumber, x.Quantity.ToString(), x.CostPrice.ToString(), x.SellingPrice.ToString(), x.TotalCostValue.ToString(), x.PotentialSellingValue.ToString(), x.StorageLocation }.Select(Csv))));
+    private Task ExportProfitReportAsync() => ExportReportAsync("sales-profit", "InvoiceReference,InvoiceDate,Product,Quantity,SellingPrice,CostPrice,Revenue,Cost,GrossProfit,GrossMarginPercentage", SalesProfitReport.Select(x => string.Join(',', new[] { x.InvoiceReference, x.InvoiceDate.ToString("yyyy-MM-dd"), x.Product, x.QuantitySold.ToString(), x.SellingPrice.ToString(), x.CostPrice.ToString(), x.Revenue.ToString(), x.Cost.ToString(), x.GrossProfit.ToString(), x.GrossMarginPercentage.ToString() }.Select(Csv))));
+    private async Task ExportReportAsync(string name, string header, IEnumerable<string> rows)
+    {
+        var dialog = new SaveFileDialog { Filter = "CSV file (*.csv)|*.csv", FileName = $"{name}-{DateTime.Today:yyyyMMdd}.csv" }; if (dialog.ShowDialog() != true) return;
+        await File.WriteAllLinesAsync(dialog.FileName, new[] { header }.Concat(rows), Encoding.UTF8); StatusMessage = $"Report exported to {dialog.FileName}.";
+    }
+    private static string Csv(string? value) => $"\"{(value ?? "").Replace("\"", "\"\"")}\"";
+    private static string[] ParseCsv(string line)
+    {
+        var values = new List<string>(); var value = new StringBuilder(); var quoted = false;
+        for (var i = 0; i < line.Length; i++) { var c = line[i]; if (c == '"' && quoted && i + 1 < line.Length && line[i + 1] == '"') { value.Append('"'); i++; } else if (c == '"') quoted = !quoted; else if (c == ',' && !quoted) { values.Add(value.ToString()); value.Clear(); } else value.Append(c); }
+        values.Add(value.ToString()); return values.ToArray();
     }
 
     private static Task Replace<T>(ObservableCollection<T> target, IEnumerable<T> source)
