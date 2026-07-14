@@ -10,6 +10,8 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
@@ -34,6 +36,13 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
 
         modelBuilder.Entity<Customer>().HasIndex(x => x.CustomerCode).IsUnique();
         modelBuilder.Entity<Product>().HasIndex(x => x.Code).IsUnique();
+        modelBuilder.Entity<Product>().HasIndex(x => x.Barcode);
+        modelBuilder.Entity<Product>().HasIndex(x => x.Name);
+        modelBuilder.Entity<Product>().HasIndex(x => x.Category);
+        modelBuilder.Entity<Category>().HasIndex(x => x.Name).IsUnique();
+        modelBuilder.Entity<Supplier>().HasIndex(x => x.CompanyName);
+        modelBuilder.Entity<StockMovement>().HasIndex(x => new { x.ProductId, x.TransactionDate });
+        modelBuilder.Entity<StockMovement>().HasIndex(x => x.RelatedInvoiceId);
         modelBuilder.Entity<Invoice>().HasIndex(x => x.ReferenceNumber).IsUnique();
         modelBuilder.Entity<Receipt>().HasIndex(x => x.ReferenceNumber).IsUnique();
         modelBuilder.Entity<DocumentSequence>().HasIndex(x => new { x.Kind, x.Prefix, x.Year }).IsUnique();
@@ -45,6 +54,36 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
             .WithOne(x => x.Invoice)
             .HasForeignKey(x => x.InvoiceId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Product>()
+            .HasOne(x => x.CategoryRecord)
+            .WithMany(x => x.Products)
+            .HasForeignKey(x => x.CategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Product>()
+            .HasOne(x => x.Supplier)
+            .WithMany(x => x.Products)
+            .HasForeignKey(x => x.SupplierId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<InvoiceItem>()
+            .HasOne(x => x.Product)
+            .WithMany()
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(x => x.Product)
+            .WithMany(x => x.StockMovements)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(x => x.RelatedInvoice)
+            .WithMany()
+            .HasForeignKey(x => x.RelatedInvoiceId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Receipt>()
             .HasOne(x => x.Invoice)
@@ -123,8 +162,8 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
             new Customer { Id = 2, CustomerCode = "CUS-0002", Name = "Northwind Services", AttentionName = "Billing Department", Address = "88 Service Avenue", Telephone = "555-0199", Email = "billing@northwind.test", TaxNumber = "TX-200", OpeningBalance = 120 });
 
         modelBuilder.Entity<Product>().HasData(
-            new Product { Id = 1, Code = "SRV-001", Description = "Embedded software consulting", Type = ProductType.Service, Unit = "hr", SellingPrice = 75m, TaxPercentage = 6.25m },
-            new Product { Id = 2, Code = "PRT-001", Description = "Controller board", Type = ProductType.Product, Unit = "ea", SellingPrice = 345m, CostPrice = 210m, TaxPercentage = 6.25m, CurrentQuantity = 25, MinimumQuantity = 5 });
+            new Product { Id = 1, Code = "SRV-001", Name = "Embedded software consulting", Description = "Embedded software consulting", Type = ProductType.Service, Unit = "hr", SellingPrice = 75m, TaxPercentage = 6.25m, TrackStock = false },
+            new Product { Id = 2, Code = "PRT-001", Name = "Controller board", Description = "Controller board", Type = ProductType.Product, Unit = "ea", SellingPrice = 345m, CostPrice = 210m, TaxPercentage = 6.25m, CurrentQuantity = 25, MinimumQuantity = 5, TrackStock = true });
 
         modelBuilder.Entity<PaymentMethod>().HasData(
             new PaymentMethod { Id = 1, Name = "Cash", MethodType = PaymentMethodType.Cash },

@@ -3,6 +3,7 @@ using System;
 using InvoiceSoftware.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InvoiceSoftware.Data.Migrations
 {
     [DbContext(typeof(InvoiceDbContext))]
-    partial class InvoiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713143916_AddStoreInventoryManagement")]
+    partial class AddStoreInventoryManagement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.18");
@@ -191,7 +194,7 @@ namespace InvoiceSoftware.Data.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6916),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2890),
                             IsActive = true,
                             IsDeleted = false,
                             Name = "Services"
@@ -199,7 +202,7 @@ namespace InvoiceSoftware.Data.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6920),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2892),
                             IsActive = true,
                             IsDeleted = false,
                             Name = "Hardware"
@@ -329,7 +332,7 @@ namespace InvoiceSoftware.Data.Migrations
                             ApplicationDisplayName = "Invoice Management Software",
                             CompanyName = "MicroBrain Embedded System Solutions",
                             ContactPersonName = "Fadi Assi",
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6620),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2630),
                             Currency = "USD",
                             CurrencySymbol = "$",
                             DeductInventoryOnInvoice = false,
@@ -431,7 +434,7 @@ namespace InvoiceSoftware.Data.Migrations
                             Id = 1,
                             Address = "12 Market Street",
                             AttentionName = "Accounts Payable",
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6823),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2805),
                             CreditLimit = 0m,
                             CustomerCode = "CUS-0001",
                             Email = "ap@acme.test",
@@ -447,7 +450,7 @@ namespace InvoiceSoftware.Data.Migrations
                             Id = 2,
                             Address = "88 Service Avenue",
                             AttentionName = "Billing Department",
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6828),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2809),
                             CreditLimit = 0m,
                             CustomerCode = "CUS-0002",
                             Email = "billing@northwind.test",
@@ -754,7 +757,7 @@ namespace InvoiceSoftware.Data.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6892),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2867),
                             IsActive = true,
                             IsDeleted = false,
                             MethodType = 0,
@@ -763,7 +766,7 @@ namespace InvoiceSoftware.Data.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6894),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2870),
                             IsActive = true,
                             IsDeleted = false,
                             MethodType = 2,
@@ -772,7 +775,7 @@ namespace InvoiceSoftware.Data.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6895),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2871),
                             IsActive = true,
                             IsDeleted = false,
                             MethodType = 1,
@@ -904,7 +907,7 @@ namespace InvoiceSoftware.Data.Migrations
                             Id = 1,
                             Code = "SRV-001",
                             CostPrice = 0m,
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6860),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2835),
                             CurrentQuantity = 0m,
                             DefaultDiscount = 0m,
                             Description = "Embedded software consulting",
@@ -924,7 +927,7 @@ namespace InvoiceSoftware.Data.Migrations
                             Id = 2,
                             Code = "PRT-001",
                             CostPrice = 210m,
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6866),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2841),
                             CurrentQuantity = 25m,
                             DefaultDiscount = 0m,
                             Description = "Controller board",
@@ -1222,7 +1225,7 @@ namespace InvoiceSoftware.Data.Migrations
                         {
                             Id = 1,
                             Abbreviation = "ea",
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6940),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2910),
                             IsDeleted = false,
                             Name = "Each"
                         },
@@ -1230,7 +1233,7 @@ namespace InvoiceSoftware.Data.Migrations
                         {
                             Id = 2,
                             Abbreviation = "hr",
-                            CreatedAt = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc).AddTicks(6942),
+                            CreatedAt = new DateTime(2026, 7, 13, 14, 39, 15, 590, DateTimeKind.Utc).AddTicks(2918),
                             IsDeleted = false,
                             Name = "Hour"
                         });

@@ -25,5 +25,6 @@ public sealed class CompanySettings : BaseEntity
     public string PreferredPaperSize { get; set; } = "A4";
     public string ApplicationDisplayName { get; set; } = "Invoice Management Software";
     public bool DeductInventoryOnInvoice { get; set; } = false;
+    public bool AllowSellingWhenStockIsInsufficient { get; set; } = false;
     public bool AllowOverpayments { get; set; } = false;
 }

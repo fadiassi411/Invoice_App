@@ -19,6 +19,7 @@ public interface IInvoiceService
 public interface IReceiptService
 {
     Task<Receipt> CreateForInvoiceAsync(int invoiceId, decimal amount, PaymentMethodType paymentMethod, string? transactionReference, string? notes = null, CancellationToken cancellationToken = default);
+    Task<Receipt> CreateForRecordedPaymentAsync(int invoiceId, PaymentMethodType paymentMethod, string? transactionReference, string? notes = null, CancellationToken cancellationToken = default);
     Task<Receipt> GetOrCreateForInvoicePdfAsync(int invoiceId, CancellationToken cancellationToken = default);
     Task<List<Receipt>> GetReceiptsAsync(CancellationToken cancellationToken = default);
 }
@@ -33,6 +34,21 @@ public interface ILookupService
     Task SaveCustomerAsync(Customer customer, CancellationToken cancellationToken = default);
     Task DeleteCustomerAsync(int customerId, CancellationToken cancellationToken = default);
     Task<Product> AddProductAsync(Product product, CancellationToken cancellationToken = default);
+}
+
+public interface IInventoryService
+{
+    Task<List<Product>> SearchProductsAsync(string? text = null, int? categoryId = null, int? supplierId = null, bool? active = null, bool lowStockOnly = false, CancellationToken cancellationToken = default);
+    Task<Product> SaveProductAsync(Product product, decimal? adjustedQuantity = null, string? adjustmentNotes = null, CancellationToken cancellationToken = default);
+    Task DeleteProductAsync(int productId, CancellationToken cancellationToken = default);
+    Task<Product> DuplicateProductAsync(int productId, CancellationToken cancellationToken = default);
+    Task<List<Category>> GetCategoriesAsync(CancellationToken cancellationToken = default);
+    Task<Category> SaveCategoryAsync(Category category, CancellationToken cancellationToken = default);
+    Task<List<Supplier>> GetSuppliersAsync(CancellationToken cancellationToken = default);
+    Task<Supplier> SaveSupplierAsync(Supplier supplier, CancellationToken cancellationToken = default);
+    Task<List<StockMovement>> GetMovementsAsync(int? productId = null, CancellationToken cancellationToken = default);
+    Task<List<CurrentStockReportRow>> GetCurrentStockReportAsync(bool lowStockOnly = false, CancellationToken cancellationToken = default);
+    Task<List<SalesProfitReportRow>> GetSalesProfitReportAsync(DateTime? from = null, DateTime? to = null, CancellationToken cancellationToken = default);
 }
 
 public interface IDashboardService
@@ -57,4 +73,11 @@ public sealed record DashboardSnapshot(
     decimal OutstandingAmount,
     decimal PaymentsReceived,
     IReadOnlyList<Invoice> RecentInvoices,
-    IReadOnlyList<Receipt> RecentReceipts);
+    IReadOnlyList<Receipt> RecentReceipts,
+    int TotalActiveProducts,
+    decimal TotalQuantityInStock,
+    decimal TotalInventoryCostValue,
+    int LowStockProducts,
+    int OutOfStockProducts,
+    decimal SalesToday,
+    decimal GrossProfitToday);
