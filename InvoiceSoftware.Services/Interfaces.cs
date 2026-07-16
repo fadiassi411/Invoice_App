@@ -16,6 +16,20 @@ public interface IInvoiceService
     Task MarkPaidAsync(int invoiceId, CancellationToken cancellationToken = default);
 }
 
+public interface IQuotationService
+{
+    Task<Quotation> CreateDraftAsync(int customerId, CancellationToken cancellationToken = default);
+    Task<Quotation> SaveAsync(Quotation quotation, CancellationToken cancellationToken = default);
+    Task<Quotation?> GetAsync(int quotationId, CancellationToken cancellationToken = default);
+    Task<List<Quotation>> SearchAsync(QuotationSearchCriteria criteria, CancellationToken cancellationToken = default);
+    Task<Quotation> DuplicateAsync(int quotationId, CancellationToken cancellationToken = default);
+    Task<Quotation> CreateRevisionAsync(int quotationId, CancellationToken cancellationToken = default);
+    Task ChangeStatusAsync(int quotationId, QuotationStatus status, string? notes = null, CancellationToken cancellationToken = default);
+    Task ArchiveAsync(int quotationId, CancellationToken cancellationToken = default);
+    Task<Invoice> ConvertToInvoiceAsync(int quotationId, CancellationToken cancellationToken = default);
+    Task<QuotationStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default);
+}
+
 public interface IReceiptService
 {
     Task<Receipt> CreateForInvoiceAsync(int invoiceId, decimal amount, PaymentMethodType paymentMethod, string? transactionReference, string? notes = null, CancellationToken cancellationToken = default);
@@ -81,3 +95,24 @@ public sealed record DashboardSnapshot(
     int OutOfStockProducts,
     decimal SalesToday,
     decimal GrossProfitToday);
+
+public sealed record QuotationSearchCriteria(
+    string? Text = null,
+    int? CustomerId = null,
+    DateTime? From = null,
+    DateTime? To = null,
+    QuotationStatus? Status = null,
+    QuotationValidityFilter Validity = QuotationValidityFilter.All,
+    bool IncludeArchived = false);
+
+public sealed record QuotationStatistics(
+    int Total,
+    int Draft,
+    int Sent,
+    int Accepted,
+    int Rejected,
+    int Expired,
+    int Converted,
+    decimal TotalQuotedValue,
+    decimal AcceptanceRate,
+    decimal ConversionRate);

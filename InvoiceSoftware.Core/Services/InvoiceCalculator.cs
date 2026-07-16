@@ -21,15 +21,22 @@ public sealed class InvoiceCalculator
             item.LineSubtotal = Round(item.Quantity * item.UnitPrice);
             item.LineDiscount = Round(item.LineSubtotal * item.DiscountPercentage / 100m);
             var taxable = item.LineSubtotal - item.LineDiscount;
-            item.LineTax = Round(taxable * item.TaxPercentage / 100m);
-            item.LineTotal = Round(taxable + item.LineTax);
+            item.LineTax = invoice.TaxMode switch
+            {
+                TaxMode.Exempt => 0,
+                TaxMode.Inclusive when item.TaxPercentage > 0 => Round(taxable - taxable / (1m + item.TaxPercentage / 100m)),
+                _ => Round(taxable * item.TaxPercentage / 100m)
+            };
+            item.LineTotal = invoice.TaxMode == TaxMode.Inclusive ? Round(taxable) : Round(taxable + item.LineTax);
         }
 
         invoice.Subtotal = Round(invoice.Items.Sum(i => i.LineSubtotal));
-        invoice.TotalDiscount = Round(invoice.Items.Sum(i => i.LineDiscount));
-        invoice.TotalBeforeTax = Round(invoice.Subtotal - invoice.TotalDiscount);
+        invoice.TotalDiscount = Round(invoice.Items.Sum(i => i.LineDiscount) + invoice.OverallDiscount);
         invoice.TotalTax = Round(invoice.Items.Sum(i => i.LineTax));
-        invoice.GrandTotal = Round(invoice.TotalBeforeTax + invoice.TotalTax + invoice.ShippingCharges + invoice.PreviousBalance);
+        invoice.TotalBeforeTax = invoice.TaxMode == TaxMode.Inclusive
+            ? Round(invoice.Subtotal - invoice.TotalDiscount - invoice.TotalTax)
+            : Round(invoice.Subtotal - invoice.TotalDiscount);
+        invoice.GrandTotal = Round(invoice.TotalBeforeTax + invoice.TotalTax + invoice.ShippingCharges + invoice.AdditionalCharges + invoice.RoundingAdjustment + invoice.PreviousBalance);
         invoice.RemainingBalance = Round(invoice.GrandTotal - invoice.AmountPaid);
         invoice.PaymentStatus = invoice.AmountPaid <= 0
             ? PaymentStatus.Unpaid

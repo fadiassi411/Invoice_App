@@ -9,10 +9,10 @@ The print/PDF layout follows the reference invoice: company logo and contact det
 ## Projects
 
 - `InvoiceSoftware.App`: WPF shell, MVVM viewmodels, theme, navigation, and commands.
-- `InvoiceSoftware.Core`: domain entities, enums, and invoice calculation logic.
+- `InvoiceSoftware.Core`: domain entities, enums, and centralized invoice/quotation calculation logic.
 - `InvoiceSoftware.Data`: EF Core SQLite context, indexes, seed data, and database path conventions.
-- `InvoiceSoftware.Services`: application services for references, invoices, receipts, dashboard, lookup data, audit, backup, and restore.
-- `InvoiceSoftware.Reporting`: QuestPDF invoice and receipt templates.
+- `InvoiceSoftware.Services`: application services for references, invoices, quotations, receipts, inventory, audit, backup, and restore.
+- `InvoiceSoftware.Reporting`: separate QuestPDF invoice, quotation, and receipt templates.
 - `InvoiceSoftware.Tests`: calculation and validation tests.
 
 ## Database Location
@@ -60,3 +60,9 @@ The current version includes a working local database, sample company/customer/p
 The **Store / Inventory** workspace manages products, categories, suppliers, stock adjustments, CSV import/export, printable product lists, and the permanent stock-movement ledger. Product selection in invoice entry searches reference numbers, barcodes, names, and descriptions. Saving an invoice finalizes it and synchronizes stock transactionally; later edits apply only the quantity difference, while cancellation or deletion restores stock. Services and products with stock tracking disabled never affect inventory. The **Inventory Reports** workspace provides current-stock, low-stock, sales, revenue, cost, gross-profit, and margin reporting with CSV export.
 
 Migration `AddStoreInventoryManagement` creates the normalized inventory schema. `BackfillLegacyInventoryData` preserves existing products, derives product names and stock-tracking behavior, links matching legacy categories, and records opening stock balances. Application startup applies both migrations automatically, including after an older backup is restored.
+
+## Quotation Management
+
+The **Quotations** workspace creates searchable, revision-controlled quotations from stock items or manual service lines. Quotations use atomic `QUO-YYYY-000001` numbering, store customer/item snapshots, support line and overall discounts, inclusive/exclusive/exempt tax, validity/expiry, status history, duplication, CSV export, archiving, PDF preview/print/export, and transactional conversion of an accepted quotation into a draft invoice. Saving or revising a quotation never changes stock; inventory is affected only by the existing finalized-invoice workflow.
+
+Migration `AddQuotationManagement` adds normalized quotation, quotation-item, and status-history tables; unique number/revision constraints; search indexes; quotation settings; product/customer extensions; and quotation-to-invoice links. Existing customer, product, invoice, receipt, inventory, and backup data is preserved. The automated suite covers calculations, numbering, snapshots, revisions, expiry, search, one-page and multi-page PDFs, backup payloads, migration upgrades, stock isolation, conversion totals, and duplicate-conversion prevention.

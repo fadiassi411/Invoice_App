@@ -47,7 +47,7 @@ public sealed class MainViewModel : ObservableObject
     private DateTime? _reportFrom = DateTime.Today.AddMonths(-1);
     private DateTime? _reportTo = DateTime.Today;
 
-    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory)
+    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory, QuotationWorkspaceViewModel quotations)
     {
         _lookup = lookup;
         _invoices = invoices;
@@ -56,8 +56,12 @@ public sealed class MainViewModel : ObservableObject
         _backup = backup;
         _pdf = pdf;
         _inventory = inventory;
+        Quotations = quotations;
+        Quotations.OpenEditorRequested = () => SelectedSection = "New Quotation";
+        Quotations.CloseEditorRequested = () => SelectedSection = "Quotations";
+        Quotations.OpenInvoiceRequested = invoice => { SelectedInvoice = invoice; SelectedSection = "New Invoice"; };
 
-        Sections = ["Dashboard", "New Invoice", "Invoices", "Customers", "Store / Inventory", "Inventory Reports", "Products and Services", "Receipts", "Reports", "Backup and Restore", "Company Settings", "Application Settings"];
+        Sections = ["Dashboard", "New Invoice", "Invoices", "New Quotation", "Quotations", "Customers", "Store / Inventory", "Inventory Reports", "Products and Services", "Receipts", "Reports", "Backup and Restore", "Company Settings", "Application Settings"];
         Customers = [];
         Products = [];
         InvoiceItems = [];
@@ -115,6 +119,7 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public string[] Sections { get; }
+    public QuotationWorkspaceViewModel Quotations { get; }
     public ObservableCollection<Customer> Customers { get; }
     public ObservableCollection<Product> Products { get; }
     public ObservableCollection<Invoice> Invoices { get; }
@@ -220,6 +225,12 @@ public sealed class MainViewModel : ObservableObject
 
         if (SelectedSection == "New Invoice" && SelectedInvoice is null)
             await CreateInvoiceAsync();
+        if (SelectedSection is "New Quotation" or "Quotations")
+        {
+            await Quotations.InitializeAsync();
+            if (SelectedSection == "New Quotation" && Quotations.CurrentQuotation is null)
+                await Quotations.StartNewAsync();
+        }
     }
 
     private async Task RefreshAsync()
@@ -465,6 +476,7 @@ public sealed class MainViewModel : ObservableObject
             var customer = await _lookup.AddCustomerAsync(new Customer { Name = $"New Customer {next}", AttentionName = $"Attention Name {next}", Email = $"customer{DateTime.Now:yyyyMMddHHmmss}@example.com" });
             Customers.Add(customer);
             SelectedCustomer = customer;
+            await Quotations.RefreshLookupsAsync(customer.Id);
             StatusMessage = $"Customer {customer.CustomerCode} added.";
         }
         catch (Exception ex)
@@ -485,6 +497,7 @@ public sealed class MainViewModel : ObservableObject
             }
 
             await _lookup.SaveCustomerAsync(SelectedCustomer);
+            await Quotations.RefreshLookupsAsync(SelectedCustomer.Id);
             StatusMessage = $"Customer {SelectedCustomer.CustomerCode} saved.";
         }
         catch (Exception ex)
@@ -514,6 +527,7 @@ public sealed class MainViewModel : ObservableObject
             await _lookup.DeleteCustomerAsync(deleted.Id);
             Customers.Remove(deleted);
             SelectedCustomer = Customers.FirstOrDefault();
+            await Quotations.RefreshLookupsAsync(SelectedCustomer?.Id);
             StatusMessage = $"Customer {deleted.CustomerCode} deleted.";
         }
         catch (Exception ex)

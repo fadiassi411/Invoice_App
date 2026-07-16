@@ -15,6 +15,9 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
+    public DbSet<Quotation> Quotations => Set<Quotation>();
+    public DbSet<QuotationItem> QuotationItems => Set<QuotationItem>();
+    public DbSet<QuotationStatusHistory> QuotationStatusHistory => Set<QuotationStatusHistory>();
     public DbSet<Receipt> Receipts => Set<Receipt>();
     public DbSet<ReceiptPayment> ReceiptPayments => Set<ReceiptPayment>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -44,6 +47,14 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
         modelBuilder.Entity<StockMovement>().HasIndex(x => new { x.ProductId, x.TransactionDate });
         modelBuilder.Entity<StockMovement>().HasIndex(x => x.RelatedInvoiceId);
         modelBuilder.Entity<Invoice>().HasIndex(x => x.ReferenceNumber).IsUnique();
+        modelBuilder.Entity<Invoice>().HasIndex(x => x.SourceQuotationId).IsUnique();
+        modelBuilder.Entity<Quotation>().HasIndex(x => new { x.QuotationNumber, x.RevisionNumber }).IsUnique();
+        modelBuilder.Entity<Quotation>().HasIndex(x => x.QuotationNumber);
+        modelBuilder.Entity<Quotation>().HasIndex(x => new { x.CustomerId, x.QuotationDate });
+        modelBuilder.Entity<Quotation>().HasIndex(x => new { x.Status, x.ValidUntil });
+        modelBuilder.Entity<Quotation>().HasIndex(x => x.ConvertedInvoiceId).IsUnique();
+        modelBuilder.Entity<QuotationItem>().HasIndex(x => new { x.QuotationId, x.DisplayOrder });
+        modelBuilder.Entity<QuotationStatusHistory>().HasIndex(x => new { x.QuotationId, x.ChangedAt });
         modelBuilder.Entity<Receipt>().HasIndex(x => x.ReferenceNumber).IsUnique();
         modelBuilder.Entity<DocumentSequence>().HasIndex(x => new { x.Kind, x.Prefix, x.Year }).IsUnique();
         modelBuilder.Entity<ApplicationSettings>().HasIndex(x => x.Key).IsUnique();
@@ -72,6 +83,42 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
             .WithMany()
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Quotation>()
+            .HasMany(x => x.Items)
+            .WithOne(x => x.Quotation)
+            .HasForeignKey(x => x.QuotationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Quotation>()
+            .HasMany(x => x.StatusHistory)
+            .WithOne(x => x.Quotation)
+            .HasForeignKey(x => x.QuotationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Quotation>()
+            .HasOne(x => x.ParentQuotation)
+            .WithMany()
+            .HasForeignKey(x => x.ParentQuotationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<QuotationItem>()
+            .HasOne(x => x.StockItem)
+            .WithMany()
+            .HasForeignKey(x => x.StockItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Quotation>()
+            .HasOne(x => x.ConvertedInvoice)
+            .WithMany()
+            .HasForeignKey(x => x.ConvertedInvoiceId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Invoice>()
+            .HasOne(x => x.SourceQuotation)
+            .WithMany()
+            .HasForeignKey(x => x.SourceQuotationId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<StockMovement>()
             .HasOne(x => x.Product)
@@ -138,9 +185,12 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
 
     private static void Seed(ModelBuilder modelBuilder)
     {
+        // Keep seed timestamps deterministic so feature migrations never rewrite unrelated production rows.
+        var seedBase = new DateTime(2026, 7, 13, 14, 43, 5, 589, DateTimeKind.Utc);
         modelBuilder.Entity<CompanySettings>().HasData(new CompanySettings
         {
             Id = 1,
+            CreatedAt = seedBase.AddTicks(6620),
             CompanyName = "MicroBrain Embedded System Solutions",
             ContactPersonName = "Fadi Assi",
             LogoPath = @"C:\Users\Fady\Documents\Logo\Logo.png",
@@ -158,19 +208,19 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
         });
 
         modelBuilder.Entity<Customer>().HasData(
-            new Customer { Id = 1, CustomerCode = "CUS-0001", Name = "Acme Manufacturing", AttentionName = "Accounts Payable", Address = "12 Market Street", Telephone = "555-0100", Email = "ap@acme.test", TaxNumber = "TX-100", OpeningBalance = 0 },
-            new Customer { Id = 2, CustomerCode = "CUS-0002", Name = "Northwind Services", AttentionName = "Billing Department", Address = "88 Service Avenue", Telephone = "555-0199", Email = "billing@northwind.test", TaxNumber = "TX-200", OpeningBalance = 120 });
+            new Customer { Id = 1, CreatedAt = seedBase.AddTicks(6823), CustomerCode = "CUS-0001", Name = "Acme Manufacturing", AttentionName = "Accounts Payable", Address = "12 Market Street", Telephone = "555-0100", Email = "ap@acme.test", TaxNumber = "TX-100", OpeningBalance = 0 },
+            new Customer { Id = 2, CreatedAt = seedBase.AddTicks(6828), CustomerCode = "CUS-0002", Name = "Northwind Services", AttentionName = "Billing Department", Address = "88 Service Avenue", Telephone = "555-0199", Email = "billing@northwind.test", TaxNumber = "TX-200", OpeningBalance = 120 });
 
         modelBuilder.Entity<Product>().HasData(
-            new Product { Id = 1, Code = "SRV-001", Name = "Embedded software consulting", Description = "Embedded software consulting", Type = ProductType.Service, Unit = "hr", SellingPrice = 75m, TaxPercentage = 6.25m, TrackStock = false },
-            new Product { Id = 2, Code = "PRT-001", Name = "Controller board", Description = "Controller board", Type = ProductType.Product, Unit = "ea", SellingPrice = 345m, CostPrice = 210m, TaxPercentage = 6.25m, CurrentQuantity = 25, MinimumQuantity = 5, TrackStock = true });
+            new Product { Id = 1, CreatedAt = seedBase.AddTicks(6860), Code = "SRV-001", Name = "Embedded software consulting", Description = "Embedded software consulting", Type = ProductType.Service, Unit = "hr", SellingPrice = 75m, TaxPercentage = 6.25m, TrackStock = false },
+            new Product { Id = 2, CreatedAt = seedBase.AddTicks(6866), Code = "PRT-001", Name = "Controller board", Description = "Controller board", Type = ProductType.Product, Unit = "ea", SellingPrice = 345m, CostPrice = 210m, TaxPercentage = 6.25m, CurrentQuantity = 25, MinimumQuantity = 5, TrackStock = true });
 
         modelBuilder.Entity<PaymentMethod>().HasData(
-            new PaymentMethod { Id = 1, Name = "Cash", MethodType = PaymentMethodType.Cash },
-            new PaymentMethod { Id = 2, Name = "Bank transfer", MethodType = PaymentMethodType.BankTransfer },
-            new PaymentMethod { Id = 3, Name = "Credit card", MethodType = PaymentMethodType.CreditCard });
+            new PaymentMethod { Id = 1, CreatedAt = seedBase.AddTicks(6892), Name = "Cash", MethodType = PaymentMethodType.Cash },
+            new PaymentMethod { Id = 2, CreatedAt = seedBase.AddTicks(6894), Name = "Bank transfer", MethodType = PaymentMethodType.BankTransfer },
+            new PaymentMethod { Id = 3, CreatedAt = seedBase.AddTicks(6895), Name = "Credit card", MethodType = PaymentMethodType.CreditCard });
 
-        modelBuilder.Entity<Category>().HasData(new Category { Id = 1, Name = "Services" }, new Category { Id = 2, Name = "Hardware" });
-        modelBuilder.Entity<Unit>().HasData(new Unit { Id = 1, Name = "Each", Abbreviation = "ea" }, new Unit { Id = 2, Name = "Hour", Abbreviation = "hr" });
+        modelBuilder.Entity<Category>().HasData(new Category { Id = 1, CreatedAt = seedBase.AddTicks(6916), Name = "Services" }, new Category { Id = 2, CreatedAt = seedBase.AddTicks(6920), Name = "Hardware" });
+        modelBuilder.Entity<Unit>().HasData(new Unit { Id = 1, CreatedAt = seedBase.AddTicks(6940), Name = "Each", Abbreviation = "ea" }, new Unit { Id = 2, CreatedAt = seedBase.AddTicks(6942), Name = "Hour", Abbreviation = "hr" });
     }
 }

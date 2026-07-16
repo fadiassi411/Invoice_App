@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.ComponentModel;
+using InvoiceSoftware.App.ViewModels;
 
 namespace InvoiceSoftware.App;
 
@@ -11,6 +13,28 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Closing += OnWindowClosing;
+    }
+
+    private void QuotationItemsGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (DataContext is MainViewModel viewModel)
+                viewModel.Quotations.NotifyEditorChanged();
+        });
+    }
+
+    private void QuotationEditor_Changed(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.Quotations.MarkUnsaved();
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (DataContext is not MainViewModel { Quotations.HasUnsavedChanges: true }) return;
+        e.Cancel = MessageBox.Show("A quotation has unsaved changes. Close the application and discard them?", "Unsaved quotation", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes;
     }
 
     private void InvoiceActionsButton_Click(object sender, RoutedEventArgs e)

@@ -8,8 +8,14 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel>
             <TextBlock Text="Select a product" FontSize="24" FontWeight="SemiBold" Foreground="#0D2B68"/>
-            <TextBlock Text="Search by reference, barcode, name, or description. Use arrow keys and Enter to select." Foreground="#607089" Margin="0,3,0,10"/>
-            <TextBox x:Name="SearchBox" TextChanged="OnSearchChanged" FontSize="15" ToolTip="Type to search"/>
+            <TextBlock Text="Search by reference, part number, barcode, name, description, category, brand, or manufacturer." Foreground="#607089" Margin="0,3,0,10"/>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBox x:Name="SearchBox" TextChanged="OnSearchChanged" KeyDown="OnSearchKeyDown" FontSize="15" ToolTip="Enter an item reference, part number, barcode, or description"/>
+                <Button Grid.Column="1" Content="Search" Click="OnSearch" MinWidth="92" ToolTip="Search active stock items"/>
+                <Button Grid.Column="2" Content="Clear" Click="OnClearSearch" MinWidth="82" ToolTip="Clear the search and show all active items"/>
+            </Grid>
+            <TextBlock x:Name="ResultMessage" Foreground="#607089" Margin="4,4,0,0"/>
         </StackPanel>
         <DataGrid x:Name="ProductsGrid" Grid.Row="1" Margin="0,12" IsReadOnly="True" SelectionMode="Single" MouseDoubleClick="OnDoubleClick" AutoGenerateColumns="False">
             <DataGrid.Columns>
@@ -24,7 +30,7 @@
         </DataGrid>
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Click="OnCancel"/>
-            <Button Content="Add to Invoice" Click="OnSelect" IsDefault="True"/>
+            <Button x:Name="SelectButton" Content="Add to Invoice" Click="OnSelect" IsDefault="True"/>
         </StackPanel>
     </Grid>
 </Window>
