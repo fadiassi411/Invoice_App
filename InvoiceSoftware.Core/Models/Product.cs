@@ -30,6 +30,7 @@ public sealed class Unit : BaseEntity
 public sealed class Product : BaseEntity
 {
     public string Code { get; set; } = "";
+    public string? PartNumber { get; set; }
     public string? Barcode { get; set; }
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
@@ -37,6 +38,8 @@ public sealed class Product : BaseEntity
     public int? CategoryId { get; set; }
     public Category? CategoryRecord { get; set; }
     public string? Brand { get; set; }
+    public string? Manufacturer { get; set; }
+    public string? Warranty { get; set; }
     public int? SupplierId { get; set; }
     public Supplier? Supplier { get; set; }
     public ProductType Type { get; set; } = ProductType.Product;

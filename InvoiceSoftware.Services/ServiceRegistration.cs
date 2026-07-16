@@ -8,8 +8,10 @@ public static class ServiceRegistration
     public static IServiceCollection AddInvoiceServices(this IServiceCollection services)
     {
         services.AddScoped<InvoiceCalculator>();
+        services.AddScoped<QuotationCalculator>();
         services.AddScoped<IReferenceNumberService, ReferenceNumberService>();
         services.AddScoped<IInvoiceService, InvoiceService>();
+        services.AddScoped<IQuotationService, QuotationService>();
         services.AddScoped<IReceiptService, ReceiptService>();
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IInventoryService, InventoryService>();

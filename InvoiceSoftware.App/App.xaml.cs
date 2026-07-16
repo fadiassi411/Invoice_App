@@ -23,6 +23,8 @@ public partial class App : Application
         services.AddDbContext<InvoiceDbContext>(options => options.UseSqlite(DatabasePaths.ConnectionString));
         services.AddInvoiceServices();
         services.AddScoped<IInvoicePdfService, InvoicePdfService>();
+        services.AddScoped<IQuotationPdfService, QuotationPdfService>();
+        services.AddSingleton<QuotationWorkspaceViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
         _services = services.BuildServiceProvider();

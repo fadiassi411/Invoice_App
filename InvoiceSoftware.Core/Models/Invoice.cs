@@ -4,6 +4,9 @@ public sealed class Invoice : BaseEntity
 {
     public string ReferenceNumber { get; set; } = "";
     public string InvoiceNumber { get; set; } = "";
+    public int? SourceQuotationId { get; set; }
+    public Quotation? SourceQuotation { get; set; }
+    public string? SourceQuotationNumber { get; set; }
     public DateTime InvoiceDate { get; set; } = DateTime.Today;
     public DateTime DueDate { get; set; } = DateTime.Today.AddDays(30);
     public int CustomerId { get; set; }
@@ -15,14 +18,24 @@ public sealed class Invoice : BaseEntity
     public string? CustomerTaxNumberSnapshot { get; set; }
     public PaymentMethodType PaymentMethod { get; set; } = PaymentMethodType.Cash;
     public string Currency { get; set; } = "USD";
+    public TaxMode TaxMode { get; set; } = TaxMode.Exclusive;
     public InvoiceStatus Status { get; set; } = InvoiceStatus.Draft;
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
     public string? Notes { get; set; }
+    public string? ProjectName { get; set; }
+    public string? ProjectLocation { get; set; }
+    public string? CustomerReference { get; set; }
+    public string? PaymentTerms { get; set; }
+    public string? DeliveryTerms { get; set; }
+    public string? Warranty { get; set; }
     public decimal Subtotal { get; set; }
     public decimal TotalDiscount { get; set; }
+    public decimal OverallDiscount { get; set; }
     public decimal TotalBeforeTax { get; set; }
     public decimal TotalTax { get; set; }
     public decimal ShippingCharges { get; set; }
+    public decimal AdditionalCharges { get; set; }
+    public decimal RoundingAdjustment { get; set; }
     public decimal PreviousBalance { get; set; }
     public decimal AmountPaid { get; set; }
     public decimal RemainingBalance { get; set; }

@@ -18,7 +18,24 @@ public sealed class CompanySettings : BaseEntity
     public decimal DefaultTaxPercentage { get; set; } = 6.25m;
     public string InvoicePrefix { get; set; } = "INV";
     public string ReceiptPrefix { get; set; } = "REC";
+    public string QuotationPrefix { get; set; } = "QUO";
     public bool IncludeYearInReferences { get; set; } = true;
+    public bool ResetQuotationSequenceYearly { get; set; } = true;
+    public int QuotationStartingSequence { get; set; } = 1;
+    public int DefaultQuotationValidityDays { get; set; } = 30;
+    public string DefaultQuotationTaxMode { get; set; } = "Exclusive";
+    public string? DefaultQuotationPaymentTerms { get; set; }
+    public string? DefaultQuotationDeliveryTerms { get; set; }
+    public string? DefaultQuotationWarranty { get; set; }
+    public string QuotationFooter { get; set; } = "This quotation is subject to the terms and conditions stated herein and remains valid until the indicated validity date.";
+    public string? QuotationTermsAndConditions { get; set; }
+    public bool AllowQuotationPriceOverride { get; set; } = true;
+    public bool AllowQuotationBelowCost { get; set; }
+    public bool ShowAvailableStockOnQuotationScreen { get; set; } = true;
+    public bool ShowAvailableStockOnPrintedQuotation { get; set; }
+    public bool PreventQuotationAboveAvailableStock { get; set; }
+    public bool OpenQuotationPdfAfterExport { get; set; } = true;
+    public string? DefaultQuotationPdfFolder { get; set; }
     public string InvoiceFooterNotes { get; set; } = "Thank you for your business.";
     public string PaymentTerms { get; set; } = "Total payment due in 30 days.";
     public string? BankInformation { get; set; }
