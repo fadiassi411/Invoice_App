@@ -3,15 +3,212 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:InvoiceSoftware.App.Converters"
         xmlns:models="clr-namespace:InvoiceSoftware.Core.Models;assembly=InvoiceSoftware.Core"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="Invoice Management Software"
         Width="1320" Height="860" MinWidth="1120" MinHeight="720"
         Background="{StaticResource BackgroundBrush}">
     <Window.Resources>
         <conv:SectionVisibilityConverter x:Key="SectionVisibility" />
-        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Margin" Value="0,3" />
-            <Setter Property="Background" Value="#153D70" />
+        <Style x:Key="SidebarSectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#6F96C2" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="12,13,0,5" />
+        </Style>
+        <Style x:Key="SidebarListItem" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <DataTemplate x:Key="SidebarNavItemTemplate">
+            <Button x:Name="NavButton" Style="{DynamicResource SidebarNavButton}"
+                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}">
+                <Grid Height="38">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="34" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="NavIconTile" Width="28" Height="28" CornerRadius="8" Background="#153966" VerticalAlignment="Center">
+                        <TextBlock x:Name="NavIcon" Text="&#xE10F;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                   Foreground="#8FB5DA" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="{Binding}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                               FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </Grid>
+            </Button>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding}" Value="Dashboard"><Setter TargetName="NavIcon" Property="Text" Value="&#xE80F;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Invoices"><Setter TargetName="NavIcon" Property="Text" Value="&#xE8A5;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Quotations"><Setter TargetName="NavIcon" Property="Text" Value="&#xE8A7;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Customers"><Setter TargetName="NavIcon" Property="Text" Value="&#xE716;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Receipts"><Setter TargetName="NavIcon" Property="Text" Value="&#xE8C7;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Store / Inventory"><Setter TargetName="NavIcon" Property="Text" Value="&#xE7C3;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Products and Services"><Setter TargetName="NavIcon" Property="Text" Value="&#xE7B8;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Inventory Reports"><Setter TargetName="NavIcon" Property="Text" Value="&#xE9D2;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Reports"><Setter TargetName="NavIcon" Property="Text" Value="&#xE9D5;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Backup and Restore"><Setter TargetName="NavIcon" Property="Text" Value="&#xE74E;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Company Settings"><Setter TargetName="NavIcon" Property="Text" Value="&#xE719;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Application Settings"><Setter TargetName="NavIcon" Property="Text" Value="&#xE713;" /></DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Dashboard"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Dashboard"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Invoices"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Invoices"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Quotations"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Quotations"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Customers"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Customers"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Receipts"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Receipts"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Store / Inventory"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Store / Inventory"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Products and Services"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Products and Services"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Inventory Reports"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Inventory Reports"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Reports"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Reports"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Backup and Restore"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Backup and Restore"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Company Settings"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Company Settings"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Application Settings"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Application Settings"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+        <Style x:Key="SidebarNavList" TargetType="ItemsControl">
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="ItemTemplate" Value="{StaticResource SidebarNavItemTemplate}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ItemsControl">
+                        <ItemsPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SidebarNavButton" TargetType="Button">
+            <Setter Property="Foreground" Value="#C8DAEC" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="10,2,10,2" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="NavSurface" Background="{TemplateBinding Background}" CornerRadius="9" Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Border x:Name="ActiveMark" Width="3" Height="20" CornerRadius="2" Background="#33D2FF"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-10,0,0,0" Opacity="0" />
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavSurface" Property="Background" Value="#143D70" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Active">
+                                <Setter TargetName="NavSurface" Property="Background" Value="#155A94" />
+                                <Setter TargetName="ActiveMark" Property="Opacity" Value="1" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="NavSurface" Property="BorderBrush" Value="#65D9FF" />
+                                <Setter TargetName="NavSurface" Property="BorderThickness" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="QuickCreateButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="MinHeight" Value="64" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="QuickSurface" Background="{TemplateBinding Background}" CornerRadius="11" Padding="{TemplateBinding Padding}"
+                                BorderBrush="#35BFEA" BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="QuickSurface" Property="Opacity" Value="0.86" /></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="QuickSurface" Property="Opacity" Value="0.72" /></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="QuickSurface" Property="Opacity" Value="0.45" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SidebarScrollBar" TargetType="ScrollBar">
+            <Setter Property="Width" Value="7" />
+            <Setter Property="Margin" Value="3,2,0,2" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True" Focusable="False">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="False" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb MinHeight="34">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="#4877A6" CornerRadius="3" Opacity="0.75" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="False" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="White" />
@@ -106,24 +303,105 @@
     </Window.InputBindings>
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="276" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#0D2B68" Padding="16">
+        <Border Grid.Column="0" Padding="14,16,14,14" BorderBrush="#17447A" BorderThickness="0,0,1,0">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0.9,1">
+                    <GradientStop Color="#081D46" Offset="0" />
+                    <GradientStop Color="#0D2B68" Offset="0.52" />
+                    <GradientStop Color="#103B72" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top">
-                    <Image Source="{Binding Company.LogoPath}" Height="64" Stretch="Uniform" Margin="0,0,0,16" />
-                    <TextBlock Text="{Binding Company.CompanyName}" Foreground="White" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
-                    <TextBlock Text="Invoice Management" Foreground="#A9C7E8" Margin="0,4,0,16" />
+                <StackPanel DockPanel.Dock="Top" Margin="4,0,4,9">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Border Width="48" Height="48" CornerRadius="14" Background="#F7FBFF" BorderBrush="#2BB7E8" BorderThickness="1" ClipToBounds="True">
+                            <Image Source="{Binding Company.LogoPath}" Width="180" Height="60" Stretch="Fill"
+                                   HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="9,0,0,0">
+                            <TextBlock Text="{Binding Company.CompanyName}" Foreground="White" FontSize="14.5" FontWeight="SemiBold"
+                                       TextWrapping="Wrap" MaxHeight="42" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="Business control center" Foreground="#8EB1D4" FontSize="11" Margin="0,3,0,0" />
+                        </StackPanel>
+                    </Grid>
+                    <Border Background="#102F5B" BorderBrush="#1C5689" BorderThickness="1" CornerRadius="7" Padding="8,5" Margin="0,12,0,0">
+                        <DockPanel>
+                            <Ellipse Width="7" Height="7" Fill="#36D2F2" Margin="0,0,7,0" VerticalAlignment="Center" />
+                            <TextBlock Text="INVOICE WORKSPACE" Foreground="#A9CBE8" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
                 </StackPanel>
-                <ItemsControl ItemsSource="{Binding Sections}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Style="{StaticResource NavButton}" Content="{Binding}" Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <Border DockPanel.Dock="Bottom" Background="#0A2450" BorderBrush="#1A4A7D" BorderThickness="1" CornerRadius="9" Padding="10,8" Margin="4,10,4,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#41C9EC" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Business workspace" Foreground="#D5E5F4" FontSize="11" FontWeight="SemiBold" />
+                            <TextBlock Text="Invoices • Stock • Reports" Foreground="#7397BC" FontSize="9.5" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource SidebarScrollBar}" />
+                    </ScrollViewer.Resources>
+                    <StackPanel>
+                        <TextBlock Text="QUICK CREATE" Style="{StaticResource SidebarSectionLabel}" Margin="12,4,0,5" />
+                        <UniformGrid Columns="2">
+                            <Button Style="{StaticResource QuickCreateButton}" Background="#167FC1" Command="{Binding NewInvoiceCommand}"
+                                    ToolTip="Create a new invoice" AutomationProperties.Name="Create new invoice">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="18" HorizontalAlignment="Center" />
+                                    <TextBlock Text="New Invoice" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource QuickCreateButton}" Background="#147F8C" Command="{Binding Quotations.NewCommand}"
+                                    ToolTip="Create a new quotation" AutomationProperties.Name="Create new quotation">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="18" HorizontalAlignment="Center" />
+                                    <TextBlock Text="New Quotation" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
+
+                        <TextBlock Text="OVERVIEW" Style="{StaticResource SidebarSectionLabel}" />
+                        <ItemsControl Style="{StaticResource SidebarNavList}">
+                            <sys:String>Dashboard</sys:String>
+                        </ItemsControl>
+
+                        <TextBlock Text="SALES" Style="{StaticResource SidebarSectionLabel}" />
+                        <ItemsControl Style="{StaticResource SidebarNavList}">
+                            <sys:String>Invoices</sys:String>
+                            <sys:String>Quotations</sys:String>
+                            <sys:String>Customers</sys:String>
+                            <sys:String>Receipts</sys:String>
+                        </ItemsControl>
+
+                        <TextBlock Text="INVENTORY" Style="{StaticResource SidebarSectionLabel}" />
+                        <ItemsControl Style="{StaticResource SidebarNavList}">
+                            <sys:String>Store / Inventory</sys:String>
+                            <sys:String>Products and Services</sys:String>
+                            <sys:String>Inventory Reports</sys:String>
+                        </ItemsControl>
+
+                        <TextBlock Text="INSIGHTS" Style="{StaticResource SidebarSectionLabel}" />
+                        <ItemsControl Style="{StaticResource SidebarNavList}">
+                            <sys:String>Reports</sys:String>
+                        </ItemsControl>
+
+                        <TextBlock Text="SYSTEM" Style="{StaticResource SidebarSectionLabel}" />
+                        <ItemsControl Style="{StaticResource SidebarNavList}">
+                            <sys:String>Backup and Restore</sys:String>
+                            <sys:String>Company Settings</sys:String>
+                            <sys:String>Application Settings</sys:String>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 
@@ -135,8 +413,12 @@
             </Grid.RowDefinitions>
             <DockPanel Grid.Row="0" Margin="0,0,0,12">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <TextBox Width="240" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search invoices by reference or customer" />
-                    <Button Content="Search" Command="{Binding RefreshCommand}" />
+                    <TextBox Width="240" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding GlobalSearchHint}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <Button Content="Search" Command="{Binding SearchCommand}" ToolTip="{Binding GlobalSearchHint}" />
                     <Button Content="New Invoice" Command="{Binding NewInvoiceCommand}" />
                     <Button Content="New Quotation" Command="{Binding Quotations.NewCommand}" />
                 </StackPanel>
@@ -162,28 +444,87 @@
                             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Sales today" /><TextBlock Text="{Binding Snapshot.SalesToday, StringFormat=N2}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
                             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Gross profit today" /><TextBlock Text="{Binding Snapshot.GrossProfitToday, StringFormat=N2}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
                         </UniformGrid>
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Text="Recent invoices" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
-                                <DataGrid ItemsSource="{Binding Snapshot.RecentInvoices}">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceNumber}" Width="140" />
-                                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerNameSnapshot}" Width="*" />
-                                        <DataGridTextColumn Header="Date" Binding="{Binding InvoiceDate, StringFormat=d}" Width="100" />
-                                        <DataGridTextColumn Header="Total" Binding="{Binding GrandTotal, StringFormat=N2}" Width="110" />
-                                        <DataGridTemplateColumn Header="Payment" Width="130">
-                                            <DataGridTemplateColumn.CellTemplate>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource Card}" MinHeight="220">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Border DockPanel.Dock="Right" Background="#E7F3FC" CornerRadius="7" Padding="8,4">
+                                            <TextBlock Text="LAST 12 MONTHS" Foreground="#176AA5" FontSize="9.5" FontWeight="SemiBold" />
+                                        </Border>
+                                        <StackPanel>
+                                            <TextBlock Text="Sales by month" FontSize="18" FontWeight="SemiBold" Foreground="#17365D" />
+                                            <TextBlock Text="Finalized invoice totals" Foreground="#6B7C93" FontSize="11" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <Grid Height="145">
+                                        <Border BorderBrush="#E6EDF6" BorderThickness="0,0,0,1" VerticalAlignment="Bottom" Margin="0,0,0,22" />
+                                        <ItemsControl ItemsSource="{Binding Snapshot.MonthlySalesTrend}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><UniformGrid Rows="1"/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Style="{StaticResource DashboardPaymentBadge}">
-                                                        <TextBlock Text="{Binding PaymentStatus}" Style="{StaticResource DashboardPaymentBadgeText}" />
-                                                    </Border>
+                                                    <Grid Margin="2,0">
+                                                        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="22"/></Grid.RowDefinitions>
+                                                        <Border Grid.Row="0" Width="18" Height="{Binding BarHeight}" VerticalAlignment="Bottom"
+                                                                Background="#2489CA" CornerRadius="5,5,2,2" ToolTipService.ShowDuration="10000">
+                                                            <Border.ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding Period}" FontWeight="SemiBold" />
+                                                                    <TextBlock Text="{Binding Amount, StringFormat=Sales: {0:N2}}" Margin="0,2,0,0" />
+                                                                </StackPanel>
+                                                            </Border.ToolTip>
+                                                        </Border>
+                                                        <TextBlock Grid.Row="1" Text="{Binding Label}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                                   Foreground="#607089" FontSize="10" />
+                                                    </Grid>
                                                 </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </StackPanel>
-                        </Border>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource Card}" MinHeight="220">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Border DockPanel.Dock="Right" Background="#E5F6F4" CornerRadius="7" Padding="8,4">
+                                            <TextBlock Text="LAST 5 YEARS" Foreground="#147B77" FontSize="9.5" FontWeight="SemiBold" />
+                                        </Border>
+                                        <StackPanel>
+                                            <TextBlock Text="Sales by year" FontSize="18" FontWeight="SemiBold" Foreground="#17365D" />
+                                            <TextBlock Text="Finalized invoice totals" Foreground="#6B7C93" FontSize="11" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <Grid Height="145">
+                                        <Border BorderBrush="#E6EDF6" BorderThickness="0,0,0,1" VerticalAlignment="Bottom" Margin="0,0,0,22" />
+                                        <ItemsControl ItemsSource="{Binding Snapshot.YearlySalesTrend}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><UniformGrid Rows="1"/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="7,0">
+                                                        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="22"/></Grid.RowDefinitions>
+                                                        <Border Grid.Row="0" Width="32" Height="{Binding BarHeight}" VerticalAlignment="Bottom"
+                                                                Background="#16928F" CornerRadius="6,6,2,2" ToolTipService.ShowDuration="10000">
+                                                            <Border.ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding Period}" FontWeight="SemiBold" />
+                                                                    <TextBlock Text="{Binding Amount, StringFormat=Sales: {0:N2}}" Margin="0,2,0,0" />
+                                                                </StackPanel>
+                                                            </Border.ToolTip>
+                                                        </Border>
+                                                        <TextBlock Grid.Row="1" Text="{Binding Label}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                                   Foreground="#607089" FontSize="10" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=New Invoice}">
@@ -602,19 +943,43 @@
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <WrapPanel>
-                                    <Button Content="＋ New Product" Command="{Binding NewInventoryProductCommand}" />
-                                    <Button Content="💾 Save" Command="{Binding SaveInventoryProductCommand}" />
-                                    <Button Content="Duplicate" Command="{Binding DuplicateInventoryProductCommand}" />
-                                    <Button Content="Clear Form" Command="{Binding ClearInventoryProductCommand}" />
-                                    <Button Content="Delete" Command="{Binding DeleteInventoryProductCommand}" Background="#B91C1C" />
-                                    <Button Content="Refresh" Command="{Binding SearchInventoryCommand}" />
-                                    <Button Content="Export CSV" Command="{Binding ExportProductsCsvCommand}" />
-                                    <Button Content="Import CSV" Command="{Binding ImportProductsCsvCommand}" />
-                                    <Button Content="Print List" Command="{Binding PrintProductsCommand}" />
-                                    <Button Content="Movement History" Command="{Binding ViewStockHistoryCommand}" />
+                                    <Button Content="Product  ▾" MinWidth="118" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Create, save, duplicate, clear, or delete a product">
+                                        <Button.ContextMenu>
+                                            <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                <MenuItem Header="New Product" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.NewInventoryProductCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Save Product" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.SaveInventoryProductCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Duplicate Product" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.DuplicateInventoryProductCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Clear Form" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ClearInventoryProductCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <Separator Margin="5,4" />
+                                                <MenuItem Header="Delete Product" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.DeleteInventoryProductCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
+                                    <Button Content="Data  ▾" MinWidth="102" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Refresh, import, or export inventory data">
+                                        <Button.ContextMenu>
+                                            <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                <MenuItem Header="Refresh Product List" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.SearchInventoryCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <Separator Margin="5,4" />
+                                                <MenuItem Header="Import Products from CSV" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ImportProductsCsvCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Export Products to CSV" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ExportProductsCsvCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
+                                    <Button Content="Inventory  ▾" MinWidth="118" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Print the product list or view stock movement history">
+                                        <Button.ContextMenu>
+                                            <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                <MenuItem Header="Print Product List" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.PrintProductsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Movement History" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ViewStockHistoryCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
                                 </WrapPanel>
                                 <WrapPanel Margin="0,10,0,0">
-                                    <TextBox Width="260" Text="{Binding InventorySearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reference, barcode, product name, or description" />
+                                    <TextBox Width="260" Text="{Binding InventorySearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reference, part number, barcode, product, description, category, brand, supplier, or location">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Enter" Command="{Binding SearchInventoryCommand}" />
+                                        </TextBox.InputBindings>
+                                    </TextBox>
                                     <ComboBox Width="150" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategoryFilter}" DisplayMemberPath="Name" ToolTip="Category filter" />
                                     <ComboBox Width="160" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplierFilter}" DisplayMemberPath="CompanyName" ToolTip="Supplier filter" />
                                     <ComboBox Width="110" ItemsSource="{Binding ActiveFilters}" SelectedItem="{Binding InventoryActiveFilter}" />

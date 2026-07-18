@@ -77,6 +77,7 @@ public sealed class MainViewModel : ObservableObject
 
         NavigateCommand = new RelayCommand<string>(NavigateAsync);
         RefreshCommand = new RelayCommand(RefreshAsync);
+        SearchCommand = new RelayCommand(SearchCurrentSectionAsync);
         NewInvoiceCommand = new RelayCommand(CreateInvoiceAsync);
         AddInvoiceRowCommand = new RelayCommand(AddInvoiceRowAsync);
         SelectProductCommand = new RelayCommand(SelectProductAsync);
@@ -103,7 +104,7 @@ public sealed class MainViewModel : ObservableObject
         DeleteInventoryProductCommand = new RelayCommand(DeleteInventoryProductAsync);
         DuplicateInventoryProductCommand = new RelayCommand(DuplicateInventoryProductAsync);
         ClearInventoryProductCommand = new RelayCommand(NewInventoryProductAsync);
-        SearchInventoryCommand = new RelayCommand(RefreshInventoryAsync);
+        SearchInventoryCommand = new RelayCommand(SearchInventoryAsync);
         ViewStockHistoryCommand = new RelayCommand(ViewStockHistoryAsync);
         ExportProductsCsvCommand = new RelayCommand(ExportProductsCsvAsync);
         ImportProductsCsvCommand = new RelayCommand(ImportProductsCsvAsync);
@@ -136,6 +137,7 @@ public sealed class MainViewModel : ObservableObject
 
     public ICommand NavigateCommand { get; }
     public ICommand RefreshCommand { get; }
+    public ICommand SearchCommand { get; }
     public ICommand NewInvoiceCommand { get; }
     public ICommand AddInvoiceRowCommand { get; }
     public ICommand SelectProductCommand { get; }
@@ -175,9 +177,27 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ExportStockReportCommand { get; }
     public ICommand ExportProfitReportCommand { get; }
 
-    public string SelectedSection { get => _selectedSection; set => SetProperty(ref _selectedSection, value); }
+    public string SelectedSection
+    {
+        get => _selectedSection;
+        set
+        {
+            if (SetProperty(ref _selectedSection, value))
+                Raise(nameof(GlobalSearchHint));
+        }
+    }
     public string StatusMessage { get => _statusMessage; set => SetProperty(ref _statusMessage, value); }
     public string? SearchText { get => _searchText; set => SetProperty(ref _searchText, value); }
+    public string GlobalSearchHint => SelectedSection switch
+    {
+        "Customers" => "Search customers by code, name, contact, address, phone, email, or tax number",
+        "Products and Services" => "Search products and services by reference, part number, name, category, brand, supplier, or location",
+        "Store / Inventory" => "Search inventory by reference, part number, barcode, product, category, brand, supplier, or location",
+        "Inventory Reports" => "Search inventory reports by product, reference, location, or invoice",
+        "Receipts" => "Search receipts by receipt number, invoice, customer, payment method, or transaction reference",
+        "New Quotation" or "Quotations" => "Search quotations by number, customer, project, subject, or customer reference",
+        _ => "Search invoices by reference or customer"
+    };
     public CompanySettings Company { get => _company; set => SetProperty(ref _company, value); }
     public Customer? SelectedCustomer { get => _selectedCustomer; set => SetProperty(ref _selectedCustomer, value); }
     public Product? SelectedProduct { get => _selectedProduct; set => SetProperty(ref _selectedProduct, value); }
@@ -240,7 +260,7 @@ public sealed class MainViewModel : ObservableObject
             Company = await _lookup.GetCompanySettingsAsync();
             await Replace(Customers, await _lookup.GetCustomersAsync());
             await Replace(Products, await _lookup.GetProductsAsync());
-            await Replace(Invoices, await _invoices.SearchAsync(SearchText, null, null));
+            await Replace(Invoices, await _invoices.SearchAsync(null, null, null));
             await Replace(Receipts, await _receipts.GetReceiptsAsync());
             Snapshot = await _dashboard.GetSnapshotAsync();
             await RefreshInventoryAsync();
@@ -252,6 +272,102 @@ public sealed class MainViewModel : ObservableObject
             StatusMessage = ex.Message;
         }
     }
+
+    private async Task SearchCurrentSectionAsync()
+    {
+        try
+        {
+            var term = SearchText?.Trim() ?? "";
+            switch (SelectedSection)
+            {
+                case "Customers":
+                {
+                    var matches = (await _lookup.GetCustomersAsync()).Where(x => CustomerMatches(x, term)).ToList();
+                    await Replace(Customers, matches);
+                    SelectedCustomer = Customers.FirstOrDefault();
+                    StatusMessage = $"{Customers.Count} customer(s) found.";
+                    break;
+                }
+                case "Products and Services":
+                {
+                    var matches = await _inventory.SearchProductsAsync(term, active: true);
+                    await Replace(Products, matches);
+                    SelectedProduct = Products.FirstOrDefault();
+                    StatusMessage = $"{Products.Count} product(s) or service(s) found.";
+                    break;
+                }
+                case "Store / Inventory":
+                    InventorySearchText = term;
+                    await SearchInventoryAsync();
+                    break;
+                case "Inventory Reports":
+                    await SearchInventoryReportsAsync(term);
+                    break;
+                case "Receipts":
+                {
+                    var matches = (await _receipts.GetReceiptsAsync()).Where(x => ReceiptMatches(x, term)).ToList();
+                    await Replace(Receipts, matches);
+                    StatusMessage = $"{Receipts.Count} receipt(s) found.";
+                    break;
+                }
+                case "New Quotation":
+                case "Quotations":
+                    await Quotations.ApplySearchAsync(term);
+                    SelectedSection = "Quotations";
+                    StatusMessage = Quotations.StatusMessage;
+                    break;
+                default:
+                    await Replace(Invoices, await _invoices.SearchAsync(term, null, null));
+                    SelectedSection = "Invoices";
+                    StatusMessage = $"{Invoices.Count} invoice(s) found.";
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Search failed: {ex.Message}";
+        }
+    }
+
+    private async Task SearchInventoryAsync()
+    {
+        await RefreshInventoryAsync();
+        StatusMessage = $"{InventoryProducts.Count} inventory item(s) found.";
+    }
+
+    private async Task SearchInventoryReportsAsync(string term)
+    {
+        await RefreshReportsAsync();
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            await Replace(CurrentStockReport, CurrentStockReport.Where(x =>
+                Contains(x.ReferenceNumber, term) || Contains(x.Product, term) || Contains(x.StorageLocation, term)).ToList());
+            await Replace(LowStockReport, LowStockReport.Where(x =>
+                Contains(x.ReferenceNumber, term) || Contains(x.Product, term) || Contains(x.StorageLocation, term)).ToList());
+            await Replace(SalesProfitReport, SalesProfitReport.Where(x =>
+                Contains(x.InvoiceReference, term) || Contains(x.Product, term)).ToList());
+        }
+        StatusMessage = $"{CurrentStockReport.Count} stock, {LowStockReport.Count} low-stock, and {SalesProfitReport.Count} sales row(s) found.";
+    }
+
+    private static bool CustomerMatches(Customer customer, string term)
+        => string.IsNullOrWhiteSpace(term) || new[]
+        {
+            customer.CustomerCode, customer.Name, customer.CompanyName, customer.AttentionName,
+            customer.ContactPerson, customer.Address, customer.DeliveryAddress, customer.Telephone,
+            customer.Mobile, customer.Email, customer.TaxNumber, customer.CommercialRegistration, customer.Notes
+        }.Any(value => Contains(value, term));
+
+    private static bool ReceiptMatches(Receipt receipt, string term)
+        => string.IsNullOrWhiteSpace(term) || new[]
+        {
+            receipt.ReferenceNumber, receipt.Invoice?.ReferenceNumber, receipt.Customer?.CustomerCode,
+            receipt.Customer?.Name, receipt.PaymentMethod.ToString(), receipt.TransactionReference,
+            receipt.ReceivedBy, receipt.Notes
+        }.Any(value => Contains(value, term));
+
+    private static bool Contains(string? value, string term)
+        => value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true;
 
     private async Task CreateInvoiceAsync()
     {
@@ -472,7 +588,7 @@ public sealed class MainViewModel : ObservableObject
     {
         try
         {
-            var next = Customers.Count + 1;
+            var next = (await _lookup.GetCustomersAsync()).Count + 1;
             var customer = await _lookup.AddCustomerAsync(new Customer { Name = $"New Customer {next}", AttentionName = $"Attention Name {next}", Email = $"customer{DateTime.Now:yyyyMMddHHmmss}@example.com" });
             Customers.Add(customer);
             SelectedCustomer = customer;
@@ -539,7 +655,10 @@ public sealed class MainViewModel : ObservableObject
 
     private async Task AddProductAsync()
     {
-        var next = Products.Count + 1;
+        var allProducts = await _inventory.SearchProductsAsync();
+        var next = allProducts.Count + 1;
+        while (allProducts.Any(x => x.Code.Equals($"ITEM-{next:0000}", StringComparison.OrdinalIgnoreCase)))
+            next++;
         var product = await _lookup.AddProductAsync(new Product { Code = $"ITEM-{next:0000}", Description = $"New product or service {next}", SellingPrice = 100, Unit = "ea", TaxPercentage = Company.DefaultTaxPercentage });
         Products.Add(product);
         SelectedProduct = product;
