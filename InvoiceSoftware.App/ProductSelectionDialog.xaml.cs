@@ -71,6 +71,16 @@ public partial class ProductSelectionDialog : Window
         if (e.Key == Key.Escape) { DialogResult = false; e.Handled = true; }
         else if (e.Key == Key.Down) { ProductsGrid.Focus(); if (ProductsGrid.SelectedIndex < ProductsGrid.Items.Count - 1) ProductsGrid.SelectedIndex++; ProductsGrid.ScrollIntoView(ProductsGrid.SelectedItem); e.Handled = true; }
         else if (e.Key == Key.Up) { ProductsGrid.Focus(); if (ProductsGrid.SelectedIndex > 0) ProductsGrid.SelectedIndex--; ProductsGrid.ScrollIntoView(ProductsGrid.SelectedItem); e.Handled = true; }
+        else if (e.Key == Key.Enter && SearchBox.IsKeyboardFocusWithin)
+        {
+            ApplyFilter();
+            if (ProductsGrid.Items.Count > 0)
+            {
+                ProductsGrid.SelectedIndex = 0;
+                ProductsGrid.Focus();
+            }
+            e.Handled = true;
+        }
         else if (e.Key == Key.Enter) { SelectCurrent(); e.Handled = true; }
     }
     private void OnDoubleClick(object sender, MouseButtonEventArgs e) => SelectCurrent();

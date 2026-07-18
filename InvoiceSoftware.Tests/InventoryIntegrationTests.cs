@@ -15,10 +15,20 @@ public sealed class InventoryIntegrationTests
     {
         await using var fixture = await TestDatabase.CreateAsync();
         var inventory = new InventoryService(fixture.Db);
-        await inventory.SaveProductAsync(NewProduct("REF-100", 10), 10, "Opening stock");
+        var product = NewProduct("REF-100", 10);
+        product.PartNumber = "PART-ALIAS-100";
+        product.Brand = "Searchable Brand";
+        product.Manufacturer = "Manufacturing Lab";
+        product.StorageLocation = "Warehouse Right";
+        product.ShelfBinNumber = "BIN-R10";
+        await inventory.SaveProductAsync(product, 10, "Opening stock");
         await Assert.ThrowsAsync<InvalidOperationException>(() => inventory.SaveProductAsync(NewProduct("REF-100", 1), 1, "Opening stock"));
-        var results = await inventory.SearchProductsAsync("REF-100");
-        Assert.Single(results);
+        Assert.Single(await inventory.SearchProductsAsync("REF-100"));
+        Assert.Single(await inventory.SearchProductsAsync("PART-ALIAS"));
+        Assert.Single(await inventory.SearchProductsAsync("Searchable Brand"));
+        Assert.Single(await inventory.SearchProductsAsync("Manufacturing Lab"));
+        Assert.Single(await inventory.SearchProductsAsync("Warehouse Right"));
+        Assert.Single(await inventory.SearchProductsAsync("BIN-R10"));
     }
 
     [Fact]

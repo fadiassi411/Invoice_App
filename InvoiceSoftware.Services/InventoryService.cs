@@ -12,7 +12,12 @@ public sealed class InventoryService(InvoiceDbContext db) : IInventoryService
         if (!string.IsNullOrWhiteSpace(text))
         {
             var term = text.Trim();
-            query = query.Where(x => x.Code.Contains(term) || (x.Barcode ?? "").Contains(term) || x.Name.Contains(term) || x.Description.Contains(term));
+            query = query.Where(x => x.Code.Contains(term) || (x.PartNumber ?? "").Contains(term) ||
+                                     (x.Barcode ?? "").Contains(term) || x.Name.Contains(term) || x.Description.Contains(term) ||
+                                     (x.Category ?? "").Contains(term) || (x.CategoryRecord != null && x.CategoryRecord.Name.Contains(term)) ||
+                                     (x.Brand ?? "").Contains(term) || (x.Manufacturer ?? "").Contains(term) ||
+                                     (x.Supplier != null && x.Supplier.CompanyName.Contains(term)) ||
+                                     (x.StorageLocation ?? "").Contains(term) || (x.ShelfBinNumber ?? "").Contains(term));
         }
         if (categoryId is not null) query = query.Where(x => x.CategoryId == categoryId);
         if (supplierId is not null) query = query.Where(x => x.SupplierId == supplierId);

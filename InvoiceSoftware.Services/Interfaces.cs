@@ -86,15 +86,21 @@ public sealed record DashboardSnapshot(
     int OverdueInvoices,
     decimal OutstandingAmount,
     decimal PaymentsReceived,
-    IReadOnlyList<Invoice> RecentInvoices,
-    IReadOnlyList<Receipt> RecentReceipts,
     int TotalActiveProducts,
     decimal TotalQuantityInStock,
     decimal TotalInventoryCostValue,
     int LowStockProducts,
     int OutOfStockProducts,
     decimal SalesToday,
-    decimal GrossProfitToday);
+    decimal GrossProfitToday,
+    IReadOnlyList<DashboardSalesPoint> MonthlySalesTrend,
+    IReadOnlyList<DashboardSalesPoint> YearlySalesTrend);
+
+public sealed record DashboardSalesPoint(
+    string Label,
+    string Period,
+    decimal Amount,
+    double BarHeight);
 
 public sealed record QuotationSearchCriteria(
     string? Text = null,

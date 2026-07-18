@@ -151,6 +151,12 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
 
     public Task StartNewAsync() => NewAsync();
 
+    public async Task ApplySearchAsync(string? searchText)
+    {
+        SearchText = searchText?.Trim() ?? "";
+        await SearchAsync();
+    }
+
     public async Task RefreshLookupsAsync(int? preferredCustomerId = null)
     {
         var customerId = preferredCustomerId ?? SelectedCustomer?.Id ?? CurrentQuotation?.CustomerId;
