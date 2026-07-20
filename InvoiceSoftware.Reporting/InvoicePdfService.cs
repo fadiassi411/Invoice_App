@@ -246,6 +246,10 @@ public sealed class InvoicePdfService : IInvoicePdfService
                     AddTotal(totals, "Discount", invoice.TotalDiscount, company.CurrencySymbol);
                     AddTotal(totals, "Tax", invoice.TotalTax, company.CurrencySymbol);
                     AddTotal(totals, "Shipping", invoice.ShippingCharges, company.CurrencySymbol);
+                    if (invoice.AdditionalCharges != 0)
+                        AddTotal(totals, "Additional charges", invoice.AdditionalCharges, company.CurrencySymbol);
+                    if (invoice.RoundingAdjustment != 0)
+                        AddTotal(totals, "Rounding adjustment", invoice.RoundingAdjustment, company.CurrencySymbol);
                     AddTotal(totals, "Previous balance", invoice.PreviousBalance, company.CurrencySymbol);
                     AddTotal(totals, "Amount paid", invoice.AmountPaid, company.CurrencySymbol);
                     totals.Item().PaddingTop(3).LineHorizontal(1).LineColor("#9aa7c8");
