@@ -91,6 +91,39 @@ public sealed class QuotationIntegrationTests
     }
 
     [Fact]
+    public async Task Reopened_stock_quotation_preserves_product_link_when_saved_and_converted()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var product = await fixture.AddProductAsync("Q-PART-LINK", 10m);
+        var quotation = await fixture.Service.CreateDraftAsync(1);
+        quotation.Items.Add(StockLine(product, 2m));
+        await fixture.Service.SaveAsync(quotation);
+
+        fixture.Db.ChangeTracker.Clear();
+        var reopened = await fixture.Service.GetAsync(quotation.Id);
+        Assert.NotNull(reopened);
+        Assert.Equal(product.Id, Assert.Single(reopened!.Items).StockItemId);
+
+        reopened.Subject = "Resaved stock quotation";
+        await fixture.Service.SaveAsync(reopened);
+        fixture.Db.ChangeTracker.Clear();
+
+        var storedStockItemId = await fixture.Db.QuotationItems
+            .Where(x => x.QuotationId == quotation.Id)
+            .Select(x => x.StockItemId)
+            .SingleAsync();
+        Assert.Equal(product.Id, storedStockItemId);
+
+        await fixture.Service.ChangeStatusAsync(quotation.Id, QuotationStatus.Sent);
+        await fixture.Service.ChangeStatusAsync(quotation.Id, QuotationStatus.Accepted);
+        var invoice = await fixture.Service.ConvertToInvoiceAsync(quotation.Id);
+        var invoiceLine = Assert.Single(invoice.Items);
+
+        Assert.Equal(product.Id, invoiceLine.ProductId);
+        Assert.Equal(product.CostPrice, invoiceLine.CostPriceSnapshot);
+    }
+
+    [Fact]
     public async Task Accepted_quotation_converts_once_with_identical_total_and_no_stock_change()
     {
         await using var fixture = await Fixture.CreateAsync();

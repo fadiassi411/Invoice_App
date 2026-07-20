@@ -77,7 +77,7 @@ public sealed class QuotationService(
     }
 
     public Task<Quotation?> GetAsync(int quotationId, CancellationToken cancellationToken = default)
-        => db.Quotations.Include(x => x.Items).ThenInclude(x => x.StockItem)
+        => db.Quotations.Include(x => x.Items)
             .Include(x => x.StatusHistory).SingleOrDefaultAsync(x => x.Id == quotationId, cancellationToken);
 
     public async Task<List<Quotation>> SearchAsync(QuotationSearchCriteria criteria, CancellationToken cancellationToken = default)
@@ -240,7 +240,7 @@ public sealed class QuotationService(
             throw new InvalidOperationException("Add at least one quotation item.");
         var settings = await db.CompanySettings.AsNoTracking().FirstAsync(cancellationToken);
         var ids = quotation.Items.Where(x => x.StockItemId is not null).Select(x => x.StockItemId!.Value).Distinct().ToList();
-        var products = await db.Products.IgnoreQueryFilters().Include(x => x.CategoryRecord).Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, cancellationToken);
+        var products = await db.Products.IgnoreQueryFilters().AsNoTracking().Include(x => x.CategoryRecord).Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, cancellationToken);
         foreach (var item in quotation.Items.OrderBy(x => x.DisplayOrder).Select((value, index) => (value, index)))
         {
             item.value.DisplayOrder = item.index + 1;
@@ -260,7 +260,6 @@ public sealed class QuotationService(
             item.value.ManufacturerSnapshot ??= product.Manufacturer;
             item.value.WarrantySnapshot ??= product.Warranty;
             item.value.AvailableStockSnapshot = product.CurrentQuantity;
-            item.value.StockItem = null;
         }
     }
 
