@@ -1027,11 +1027,16 @@
                                         <TextBlock Text="Brand / Manufacturer"/><TextBox Text="{Binding InventoryProduct.Brand}"/>
                                         <TextBlock Text="Category"/><ComboBox ItemsSource="{Binding Categories}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding InventoryProduct.CategoryId}"/>
                                         <TextBlock Text="Supplier"/><ComboBox ItemsSource="{Binding Suppliers}" DisplayMemberPath="CompanyName" SelectedValuePath="Id" SelectedValue="{Binding InventoryProduct.SupplierId}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <Button Content="New Product" Command="{Binding NewInventoryProductCommand}"/>
+                                            <Button Content="Save Product" Command="{Binding SaveInventoryProductCommand}"/>
+                                        </StackPanel>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="10,0">
-                                        <TextBlock Text="Unit of Measurement"/><TextBox Text="{Binding InventoryProduct.Unit}"/>
-                                        <TextBlock Text="Cost Price"/><TextBox Text="{Binding InventoryProduct.CostPrice}"/>
-                                        <TextBlock Text="Selling Price"/><TextBox Text="{Binding InventoryProduct.SellingPrice}"/>
+                                        <TextBlock Text="Unit of Measurement"/><TextBox Text="{Binding InventoryProduct.Unit, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Text="Cost Price"/><TextBox Text="{Binding InventoryCostPrice}"/>
+                                        <TextBlock Text="Selling Percentage %"/><TextBox Text="{Binding InventorySellingPercentage, UpdateSourceTrigger=PropertyChanged}" ToolTip="Selling Price = Cost Price + this percentage"/>
+                                        <TextBlock Text="Selling Price"/><TextBox Text="{Binding InventorySellingPrice}"/>
                                         <TextBlock Text="Tax Rate %"/><TextBox Text="{Binding InventoryProduct.TaxPercentage}"/>
                                         <TextBlock Text="Current Quantity"/><TextBox Text="{Binding InventoryQuantityInput}" ToolTip="Changes create an auditable stock movement"/>
                                         <TextBlock Text="Stock Adjustment Reason"/><TextBox Text="{Binding StockAdjustmentNotes}"/>

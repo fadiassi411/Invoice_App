@@ -41,6 +41,8 @@ public sealed class MainViewModel : ObservableObject
     private string _inventoryActiveFilter = "All";
     private bool _lowStockOnly;
     private decimal _inventoryQuantityInput;
+    private decimal _inventorySellingPercentage;
+    private bool _updatingInventoryPricing;
     private string _stockAdjustmentNotes = "";
     private Category? _selectedCategory;
     private Supplier? _selectedSupplier;
@@ -222,6 +224,9 @@ public sealed class MainViewModel : ObservableObject
             if (SetProperty(ref _inventoryProduct, value))
             {
                 InventoryQuantityInput = value?.CurrentQuantity ?? 0;
+                UpdateInventorySellingPercentageFromPrices();
+                Raise(nameof(InventoryCostPrice));
+                Raise(nameof(InventorySellingPrice));
                 StockAdjustmentNotes = "";
             }
         }
@@ -232,6 +237,37 @@ public sealed class MainViewModel : ObservableObject
     public string InventoryActiveFilter { get => _inventoryActiveFilter; set => SetProperty(ref _inventoryActiveFilter, value); }
     public bool LowStockOnly { get => _lowStockOnly; set => SetProperty(ref _lowStockOnly, value); }
     public decimal InventoryQuantityInput { get => _inventoryQuantityInput; set => SetProperty(ref _inventoryQuantityInput, value); }
+    public decimal InventoryCostPrice
+    {
+        get => InventoryProduct?.CostPrice ?? 0;
+        set
+        {
+            if (InventoryProduct is null || InventoryProduct.CostPrice == value) return;
+            InventoryProduct.CostPrice = value;
+            Raise();
+            RecalculateInventorySellingPrice();
+        }
+    }
+    public decimal InventorySellingPercentage
+    {
+        get => _inventorySellingPercentage;
+        set
+        {
+            if (!SetProperty(ref _inventorySellingPercentage, value) || _updatingInventoryPricing) return;
+            RecalculateInventorySellingPrice();
+        }
+    }
+    public decimal InventorySellingPrice
+    {
+        get => InventoryProduct?.SellingPrice ?? 0;
+        set
+        {
+            if (InventoryProduct is null || InventoryProduct.SellingPrice == value) return;
+            InventoryProduct.SellingPrice = value;
+            Raise();
+            if (!_updatingInventoryPricing) UpdateInventorySellingPercentageFromPrices();
+        }
+    }
     public string StockAdjustmentNotes { get => _stockAdjustmentNotes; set => SetProperty(ref _stockAdjustmentNotes, value); }
     public Category? SelectedCategory { get => _selectedCategory; set => SetProperty(ref _selectedCategory, value); }
     public Supplier? SelectedSupplier { get => _selectedSupplier; set => SetProperty(ref _selectedSupplier, value); }
@@ -764,6 +800,47 @@ public sealed class MainViewModel : ObservableObject
         InventoryQuantityInput = 0;
         StatusMessage = "Enter the new product details. Required fields are marked with *.";
         return Task.CompletedTask;
+    }
+
+    private void RecalculateInventorySellingPrice()
+    {
+        if (InventoryProduct is null) return;
+
+        _updatingInventoryPricing = true;
+        try
+        {
+            var sellingPrice = decimal.Round(
+                InventoryProduct.CostPrice * (1 + (InventorySellingPercentage / 100m)),
+                2,
+                MidpointRounding.AwayFromZero);
+            if (InventoryProduct.SellingPrice == sellingPrice) return;
+            InventoryProduct.SellingPrice = sellingPrice;
+            Raise(nameof(InventorySellingPrice));
+        }
+        finally
+        {
+            _updatingInventoryPricing = false;
+        }
+    }
+
+    private void UpdateInventorySellingPercentageFromPrices()
+    {
+        var percentage = InventoryProduct is null || InventoryProduct.CostPrice == 0
+            ? 0
+            : decimal.Round(
+                ((InventoryProduct.SellingPrice - InventoryProduct.CostPrice) / InventoryProduct.CostPrice) * 100m,
+                2,
+                MidpointRounding.AwayFromZero);
+
+        _updatingInventoryPricing = true;
+        try
+        {
+            SetProperty(ref _inventorySellingPercentage, percentage, nameof(InventorySellingPercentage));
+        }
+        finally
+        {
+            _updatingInventoryPricing = false;
+        }
     }
 
     private async Task RefreshInventoryAsync()

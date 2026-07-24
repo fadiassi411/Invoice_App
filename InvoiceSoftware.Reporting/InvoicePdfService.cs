@@ -46,118 +46,198 @@ public sealed class InvoicePdfService : IInvoicePdfService
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(34);
-                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Segoe UI"));
+                page.Size(PageSizes.Letter);
+                page.MarginHorizontal(30);
+                page.MarginVertical(28);
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Segoe UI").FontColor("#111111"));
                 page.Content().Element(c => ComposePaymentReceipt(c, receipt, company));
+                page.Footer().Column(footer =>
+                {
+                    footer.Item().LineHorizontal(0.5f).LineColor("#D8D8D8");
+                    footer.Item().DefaultTextStyle(x => x.FontSize(8)).PaddingTop(10).AlignRight().Text(text =>
+                    {
+                        text.Span("Page ");
+                        text.CurrentPageNumber();
+                        text.Span(" of ");
+                        text.TotalPages();
+                    });
+                });
             });
         }).GeneratePdf(filePath);
     }
 
     private static void ComposePaymentReceipt(IContainer container, Receipt receipt, CompanySettings company)
     {
-        var amountText = AmountToWords(receipt.PaymentAmount, company.Currency);
         var invoice = receipt.Invoice;
         var customer = receipt.Customer;
-        var invoiceTotal = invoice?.GrandTotal ?? receipt.PaymentAmount;
-        var remainingAmount = invoice?.RemainingBalance ?? 0;
-        var contactPerson = !string.IsNullOrWhiteSpace(company.ContactPersonName)
-            ? company.ContactPersonName
-            : receipt.ReceivedBy;
+        var customerName = invoice?.CustomerNameSnapshot ?? customer?.Name ?? "Customer";
+        var customerAddress = invoice?.CustomerAddressSnapshot ?? customer?.Address;
+        var customerPhone = invoice?.CustomerTelephoneSnapshot ?? customer?.Telephone ?? customer?.Mobile;
+        var paidDate = receipt.ReceiptDate.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var amount = ReceiptCurrency(receipt.PaymentAmount, company);
         var description = !string.IsNullOrWhiteSpace(receipt.Notes)
             ? receipt.Notes
             : invoice is not null
-                ? $"I hereby acknowledge receipt of {amountText} ({company.Currency} {receipt.PaymentAmount:N2}) from {customer?.Name ?? "Customer"} as payment for invoice {invoice.ReferenceNumber}."
-                : $"I hereby acknowledge receipt of {amountText} ({company.Currency} {receipt.PaymentAmount:N2}).";
+                ? $"Payment for invoice {invoice.ReferenceNumber}"
+                : "Payment received";
 
-        container.PaddingHorizontal(18).PaddingTop(18).Column(outer =>
+        container.Column(page =>
         {
-            outer.Item().Border(1).BorderColor(Colors.Black).MinHeight(700).Column(col =>
+            page.Item().Row(header =>
             {
-                col.Item().Padding(4).MinHeight(125).Row(row =>
-                {
-                    row.RelativeItem().Column(left =>
-                    {
-                        left.Item().PaddingTop(64).Text("FROM").FontSize(10).Bold();
-                        left.Item().Text(contactPerson ?? company.CompanyName);
-                        left.Item().Text(company.Email ?? "").FontColor("#0563c1").Underline();
-                        left.Item().Text(company.Mobile ?? company.Telephone ?? "");
-                    });
-                    row.RelativeItem().Column(right =>
-                    {
-                        right.Item().AlignCenter().Text("Receipt").FontSize(28).Bold().FontColor("#555555");
-                        right.Item().PaddingTop(18).Row(meta =>
-                        {
-                            meta.ConstantItem(70).AlignRight().Text("DATE:").Bold();
-                            meta.RelativeItem().BorderBottom(1).PaddingLeft(4).Text(receipt.ReceiptDate.ToString("d"));
-                        });
-                        right.Item().Row(meta =>
-                        {
-                            meta.ConstantItem(70).AlignRight().Text("RECEIPT #").Bold();
-                            meta.RelativeItem().BorderBottom(1).PaddingLeft(4).Text(receipt.ReferenceNumber);
-                        });
-                        right.Item().PaddingTop(26).Text("TO").FontSize(10).Bold();
-                        right.Item().Text($"Name: {customer?.Name ?? "Customer"}");
-                        right.Item().Text(customer?.Address ?? "");
-                        right.Item().Text($"Phone: {customer?.Telephone ?? customer?.Mobile ?? ""}");
-                    });
-                });
-
-                col.Item().PaddingTop(8).PaddingLeft(40).Text(t =>
-                {
-                    t.Span("DUE:  ").Bold();
-                    t.Span((invoice?.DueDate ?? receipt.ReceiptDate).ToString("d"));
-                });
-
-                col.Item().PaddingTop(12).Table(table =>
-                {
-                    table.ColumnsDefinition(cols =>
-                    {
-                        cols.RelativeColumn(5);
-                        cols.RelativeColumn(1);
-                        cols.RelativeColumn(1.1f);
-                        cols.RelativeColumn(1.35f);
-                    });
-
-                    HeaderCellBlack(table, "Description");
-                    HeaderCellBlack(table, "Quantity");
-                    HeaderCellBlack(table, "Price");
-                    HeaderCellBlack(table, "Amount");
-
-                    table.Cell().Border(1).MinHeight(220).Padding(4).AlignTop().Text(description).FontSize(11);
-                    table.Cell().Border(1).MinHeight(220).AlignMiddle().AlignCenter().Text("1.00").FontSize(11);
-                    table.Cell().Border(1).MinHeight(220).AlignMiddle().AlignCenter().Text($"{company.CurrencySymbol} {receipt.PaymentAmount:N2}").FontSize(11);
-                    table.Cell().Border(1).MinHeight(220).AlignMiddle().AlignCenter().Text($"{company.CurrencySymbol} {receipt.PaymentAmount:N2}").FontSize(11);
-                });
-
-                col.Item().BorderLeft(1).BorderRight(1).BorderBottom(1).MinHeight(88).Row(row =>
-                {
-                    row.RelativeItem().Text("");
-                    row.ConstantItem(250).PaddingRight(8).Column(totals =>
-                    {
-                        ReceiptTotal(totals, "Invoice Total", $"{company.CurrencySymbol} {invoiceTotal:N2}");
-                        ReceiptTotal(totals, "Amount Received", $"{company.CurrencySymbol} {receipt.PaymentAmount:N2}");
-                        totals.Item().BorderTop(1).PaddingTop(3).Row(r =>
-                        {
-                            r.RelativeItem().AlignRight().Text("REMAINING AMOUNT").FontSize(13).Bold();
-                            r.ConstantItem(110).AlignRight().Text($"{company.CurrencySymbol} {remainingAmount:N2}").FontSize(13);
-                        });
-                    });
-                });
-
-                col.Item().BorderLeft(1).BorderRight(1).BorderBottom(1).Padding(4).MinHeight(54).Column(notes =>
-                {
-                    notes.Item().Text("Notes").FontSize(14);
-                    notes.Item().Text($"Only: {amountText}.");
-                    if (invoice is not null)
-                        notes.Item().Text($"Remaining amount after this receipt: {company.CurrencySymbol} {remainingAmount:N2}.");
-                });
-
-                col.Item().BorderLeft(1).BorderRight(1).BorderBottom(1).Height(145).PaddingTop(44).AlignCenter().Text("PAID").FontSize(40).FontColor("#9a9a9a");
+                header.RelativeItem().Text("Receipt").FontSize(26).Bold();
+                header.ConstantItem(160).Height(64).Element(logo => ReceiptLogo(logo, company));
             });
 
-            outer.Item().AlignCenter().PaddingTop(16).Text("1");
+            page.Item().PaddingTop(20).Column(meta =>
+            {
+                ReceiptMeta(meta, "Invoice number", invoice?.ReferenceNumber ?? "-");
+                ReceiptMeta(meta, "Receipt number", receipt.ReferenceNumber);
+                ReceiptMeta(meta, "Date paid", paidDate);
+            });
+
+            page.Item().PaddingTop(20).Row(parties =>
+            {
+                parties.RelativeItem().PaddingRight(28).Column(from =>
+                {
+                    from.Item().Text(company.CompanyName).Bold();
+                    ReceiptOptionalLine(from, company.Address);
+                    ReceiptOptionalLine(from, company.Telephone ?? company.Mobile);
+                    ReceiptOptionalLine(from, company.Email);
+                    ReceiptOptionalLine(from, company.Website);
+                });
+                parties.RelativeItem().Column(to =>
+                {
+                    to.Item().Text("Bill to").Bold();
+                    to.Item().PaddingTop(5).Text(customerName);
+                    ReceiptOptionalLine(to, customerAddress);
+                    ReceiptOptionalLine(to, customerPhone);
+                    ReceiptOptionalLine(to, customer?.Email);
+                });
+            });
+
+            page.Item().PaddingTop(26).Text($"{amount} paid on {paidDate}").FontSize(18).Bold();
+
+            page.Item().PaddingTop(24).Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(5);
+                    columns.ConstantColumn(48);
+                    columns.ConstantColumn(82);
+                    columns.ConstantColumn(82);
+                });
+
+                ReceiptTableHeader(table, "Description", false);
+                ReceiptTableHeader(table, "Qty", true);
+                ReceiptTableHeader(table, "Unit price", true);
+                ReceiptTableHeader(table, "Amount", true);
+
+                table.Cell().PaddingTop(7).PaddingRight(8).Column(details =>
+                {
+                    details.Item().Text(description);
+                    if (!string.IsNullOrWhiteSpace(invoice?.ProjectName))
+                        details.Item().PaddingTop(2).Text(invoice.ProjectName).FontSize(9).FontColor("#555555");
+                });
+                ReceiptTableValue(table, "1", true);
+                ReceiptTableValue(table, amount, true);
+                ReceiptTableValue(table, amount, true);
+            });
+
+            page.Item().PaddingTop(18).AlignRight().Width(278).Column(totals =>
+            {
+                ReceiptSummary(totals, "Subtotal", amount);
+                ReceiptSummary(totals, "Total", amount);
+                ReceiptSummary(totals, "Amount paid", amount, true);
+            });
+
+            page.Item().PaddingTop(28).Text("Payment history").FontSize(18).Bold();
+            page.Item().PaddingTop(18).Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(3);
+                    columns.RelativeColumn(1.55f);
+                    columns.RelativeColumn(1.4f);
+                    columns.RelativeColumn(1.6f);
+                });
+
+                ReceiptTableHeader(table, "Payment method", false);
+                ReceiptTableHeader(table, "Date", false);
+                ReceiptTableHeader(table, "Amount paid", false);
+                ReceiptTableHeader(table, "Receipt number", true);
+
+                var method = ReceiptPaymentMethod(receipt);
+                ReceiptTableValue(table, method, false);
+                ReceiptTableValue(table, paidDate, false);
+                ReceiptTableValue(table, amount, false);
+                ReceiptTableValue(table, receipt.ReferenceNumber, true);
+            });
         });
+    }
+
+    private static void ReceiptLogo(IContainer container, CompanySettings company)
+    {
+        if (!string.IsNullOrWhiteSpace(company.LogoPath) && File.Exists(company.LogoPath))
+            container.AlignRight().Image(company.LogoPath).FitArea();
+        else
+            container.AlignRight().AlignMiddle().Text(company.CompanyName).FontSize(9).Bold();
+    }
+
+    private static void ReceiptMeta(ColumnDescriptor column, string label, string value)
+        => column.Item().PaddingBottom(2).Row(row =>
+        {
+            row.ConstantItem(104).Text(label).Bold();
+            row.RelativeItem().Text(value);
+        });
+
+    private static void ReceiptOptionalLine(ColumnDescriptor column, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            column.Item().PaddingTop(2).Text(value);
+    }
+
+    private static void ReceiptTableHeader(TableDescriptor table, string text, bool alignRight)
+    {
+        var cell = table.Cell().BorderBottom(1).BorderColor("#222222").PaddingBottom(5);
+        if (alignRight) cell = cell.AlignRight();
+        cell.Text(text).FontSize(9);
+    }
+
+    private static void ReceiptTableValue(TableDescriptor table, string text, bool alignRight)
+    {
+        var cell = table.Cell().PaddingTop(7);
+        if (alignRight) cell = cell.AlignRight();
+        cell.Text(text);
+    }
+
+    private static void ReceiptSummary(ColumnDescriptor column, string label, string value, bool bold = false)
+        => column.Item().BorderTop(0.5f).BorderColor("#D8D8D8").PaddingVertical(3).Row(row =>
+        {
+            var left = row.RelativeItem().Text(label);
+            var right = row.ConstantItem(92).AlignRight().Text(value);
+            if (bold)
+            {
+                left.Bold();
+                right.Bold();
+            }
+        });
+
+    private static string ReceiptCurrency(decimal amount, CompanySettings company)
+    {
+        var prefix = string.IsNullOrWhiteSpace(company.CurrencySymbol) ? $"{company.Currency} " : company.CurrencySymbol;
+        return $"{prefix}{amount:N2}";
+    }
+
+    private static string ReceiptPaymentMethod(Receipt receipt)
+    {
+        var method = receipt.PaymentMethod switch
+        {
+            PaymentMethodType.BankTransfer => "Bank transfer",
+            PaymentMethodType.CreditCard => "Credit card",
+            _ => receipt.PaymentMethod.ToString()
+        };
+        return string.IsNullOrWhiteSpace(receipt.TransactionReference) ? method : $"{method} - {receipt.TransactionReference}";
     }
 
     private static void ComposeInvoiceHeader(IContainer container, Invoice invoice, CompanySettings company)
