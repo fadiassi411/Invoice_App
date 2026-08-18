@@ -36,6 +36,8 @@ public interface IReceiptService
     Task<Receipt> CreateForRecordedPaymentAsync(int invoiceId, PaymentMethodType paymentMethod, string? transactionReference, string? notes = null, CancellationToken cancellationToken = default);
     Task<Receipt> GetOrCreateForInvoicePdfAsync(int invoiceId, CancellationToken cancellationToken = default);
     Task<List<Receipt>> GetReceiptsAsync(CancellationToken cancellationToken = default);
+    Task UpdateAsync(int receiptId, DateTime receiptDate, PaymentMethodType paymentMethod, string? transactionReference, string? notes, string? receivedBy, CancellationToken cancellationToken = default);
+    Task SoftDeleteAsync(int receiptId, CancellationToken cancellationToken = default);
 }
 
 public interface ILookupService

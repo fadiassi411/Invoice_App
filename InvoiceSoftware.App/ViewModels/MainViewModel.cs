@@ -41,6 +41,8 @@ public sealed class MainViewModel : ObservableObject
     private string _inventoryActiveFilter = "All";
     private bool _lowStockOnly;
     private decimal _inventoryQuantityInput;
+    private decimal _inventorySellingPercentage;
+    private bool _updatingInventoryPricing;
     private string _stockAdjustmentNotes = "";
     private Category? _selectedCategory;
     private Supplier? _selectedSupplier;
@@ -83,6 +85,7 @@ public sealed class MainViewModel : ObservableObject
         SelectProductCommand = new RelayCommand(SelectProductAsync);
         RemoveInvoiceRowCommand = new RelayCommand<InvoiceItem>(RemoveInvoiceRowAsync);
         SaveInvoiceCommand = new RelayCommand(SaveInvoiceAsync);
+        EditInvoiceCommand = new RelayCommand<Invoice>(EditInvoiceAsync, invoice => invoice is not null);
         DeleteInvoiceCommand = new RelayCommand<Invoice>(DeleteInvoiceAsync, invoice => invoice is not null);
         MarkPaidCommand = new RelayCommand<Invoice>(MarkPaidAsync, invoice => invoice is not null && invoice.PaymentStatus is not PaymentStatus.Paid and not PaymentStatus.Overpaid);
         ExportInvoicePdfCommand = new RelayCommand<Invoice>(ExportInvoicePdfAsync);
@@ -91,6 +94,8 @@ public sealed class MainViewModel : ObservableObject
         ExportReceiptForInvoiceCommand = new RelayCommand<Invoice>(ExportReceiptForInvoiceAsync, invoice => invoice?.Receipts.Count > 0);
         ExportReceiptPdfCommand = new RelayCommand<Receipt>(ExportReceiptPdfAsync);
         PrintReceiptCommand = new RelayCommand<Receipt>(PrintReceiptAsync);
+        EditReceiptCommand = new RelayCommand<Receipt>(EditReceiptAsync, receipt => receipt is not null);
+        DeleteReceiptCommand = new RelayCommand<Receipt>(DeleteReceiptAsync, receipt => receipt is not null);
         AddCustomerCommand = new RelayCommand(AddCustomerAsync);
         SaveCustomerCommand = new RelayCommand(SaveCustomerAsync);
         DeleteCustomerCommand = new RelayCommand(DeleteCustomerAsync);
@@ -143,6 +148,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand SelectProductCommand { get; }
     public ICommand RemoveInvoiceRowCommand { get; }
     public ICommand SaveInvoiceCommand { get; }
+    public ICommand EditInvoiceCommand { get; }
     public ICommand DeleteInvoiceCommand { get; }
     public ICommand MarkPaidCommand { get; }
     public ICommand ExportInvoicePdfCommand { get; }
@@ -151,6 +157,8 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ExportReceiptForInvoiceCommand { get; }
     public ICommand ExportReceiptPdfCommand { get; }
     public ICommand PrintReceiptCommand { get; }
+    public ICommand EditReceiptCommand { get; }
+    public ICommand DeleteReceiptCommand { get; }
     public ICommand AddCustomerCommand { get; }
     public ICommand SaveCustomerCommand { get; }
     public ICommand DeleteCustomerCommand { get; }
@@ -222,6 +230,9 @@ public sealed class MainViewModel : ObservableObject
             if (SetProperty(ref _inventoryProduct, value))
             {
                 InventoryQuantityInput = value?.CurrentQuantity ?? 0;
+                UpdateInventorySellingPercentageFromPrices();
+                Raise(nameof(InventoryCostPrice));
+                Raise(nameof(InventorySellingPrice));
                 StockAdjustmentNotes = "";
             }
         }
@@ -232,6 +243,37 @@ public sealed class MainViewModel : ObservableObject
     public string InventoryActiveFilter { get => _inventoryActiveFilter; set => SetProperty(ref _inventoryActiveFilter, value); }
     public bool LowStockOnly { get => _lowStockOnly; set => SetProperty(ref _lowStockOnly, value); }
     public decimal InventoryQuantityInput { get => _inventoryQuantityInput; set => SetProperty(ref _inventoryQuantityInput, value); }
+    public decimal InventoryCostPrice
+    {
+        get => InventoryProduct?.CostPrice ?? 0;
+        set
+        {
+            if (InventoryProduct is null || InventoryProduct.CostPrice == value) return;
+            InventoryProduct.CostPrice = value;
+            Raise();
+            RecalculateInventorySellingPrice();
+        }
+    }
+    public decimal InventorySellingPercentage
+    {
+        get => _inventorySellingPercentage;
+        set
+        {
+            if (!SetProperty(ref _inventorySellingPercentage, value) || _updatingInventoryPricing) return;
+            RecalculateInventorySellingPrice();
+        }
+    }
+    public decimal InventorySellingPrice
+    {
+        get => InventoryProduct?.SellingPrice ?? 0;
+        set
+        {
+            if (InventoryProduct is null || InventoryProduct.SellingPrice == value) return;
+            InventoryProduct.SellingPrice = value;
+            Raise();
+            if (!_updatingInventoryPricing) UpdateInventorySellingPercentageFromPrices();
+        }
+    }
     public string StockAdjustmentNotes { get => _stockAdjustmentNotes; set => SetProperty(ref _stockAdjustmentNotes, value); }
     public Category? SelectedCategory { get => _selectedCategory; set => SetProperty(ref _selectedCategory, value); }
     public Supplier? SelectedSupplier { get => _selectedSupplier; set => SetProperty(ref _selectedSupplier, value); }
@@ -436,6 +478,8 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
+            if (SelectedCustomer is null) throw new InvalidOperationException("Select a customer before saving the invoice.");
+            SelectedInvoice.CustomerId = SelectedCustomer.Id;
             SelectedInvoice.Items = InvoiceItems.ToList();
             if (InvoiceItems.Any(x => x.ProductId is not null && x.UnitPrice < Products.FirstOrDefault(p => p.Id == x.ProductId)?.CostPrice))
             {
@@ -447,6 +491,16 @@ public sealed class MainViewModel : ObservableObject
             StatusMessage = $"Invoice {SelectedInvoice.ReferenceNumber} saved.";
         }
         catch (Exception ex) { StatusMessage = ex.Message; }
+    }
+
+    private Task EditInvoiceAsync(Invoice? invoice)
+    {
+        if (invoice is null) return Task.CompletedTask;
+        SelectedInvoice = invoice;
+        SelectedCustomer = Customers.FirstOrDefault(x => x.Id == invoice.CustomerId);
+        SelectedSection = "New Invoice";
+        StatusMessage = $"Modifying invoice {invoice.ReferenceNumber}. Save the invoice to apply your changes.";
+        return Task.CompletedTask;
     }
 
     private async Task DeleteInvoiceAsync(Invoice? invoice)
@@ -582,6 +636,41 @@ public sealed class MainViewModel : ObservableObject
         OpenPdfForPrinting(file);
         StatusMessage = $"Receipt {receipt.ReferenceNumber} opened. Use the PDF viewer print button or press Ctrl+P.";
         await Task.CompletedTask;
+    }
+
+    private async Task EditReceiptAsync(Receipt? receipt)
+    {
+        if (receipt is null) return;
+        var dialog = new ReceiptEditDialog(receipt, Company.CurrencySymbol)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            StatusMessage = $"Modification of {receipt.ReferenceNumber} cancelled.";
+            return;
+        }
+
+        await _receipts.UpdateAsync(receipt.Id, dialog.ReceiptDate, dialog.PaymentMethod,
+            dialog.TransactionReference, dialog.Notes, dialog.ReceivedBy);
+        await RefreshAsync();
+        StatusMessage = $"Receipt {receipt.ReferenceNumber} modified.";
+    }
+
+    private async Task DeleteReceiptAsync(Receipt? receipt)
+    {
+        if (receipt is null) return;
+        if (MessageBox.Show(
+                $"Delete receipt {receipt.ReferenceNumber}?\n\nIf this receipt applied a payment, the linked invoice balance will be recalculated.",
+                "Delete receipt", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        {
+            StatusMessage = $"Deletion of {receipt.ReferenceNumber} cancelled.";
+            return;
+        }
+
+        await _receipts.SoftDeleteAsync(receipt.Id);
+        await RefreshAsync();
+        StatusMessage = $"Receipt {receipt.ReferenceNumber} deleted.";
     }
 
     private async Task AddCustomerAsync()
@@ -764,6 +853,47 @@ public sealed class MainViewModel : ObservableObject
         InventoryQuantityInput = 0;
         StatusMessage = "Enter the new product details. Required fields are marked with *.";
         return Task.CompletedTask;
+    }
+
+    private void RecalculateInventorySellingPrice()
+    {
+        if (InventoryProduct is null) return;
+
+        _updatingInventoryPricing = true;
+        try
+        {
+            var sellingPrice = decimal.Round(
+                InventoryProduct.CostPrice * (1 + (InventorySellingPercentage / 100m)),
+                2,
+                MidpointRounding.AwayFromZero);
+            if (InventoryProduct.SellingPrice == sellingPrice) return;
+            InventoryProduct.SellingPrice = sellingPrice;
+            Raise(nameof(InventorySellingPrice));
+        }
+        finally
+        {
+            _updatingInventoryPricing = false;
+        }
+    }
+
+    private void UpdateInventorySellingPercentageFromPrices()
+    {
+        var percentage = InventoryProduct is null || InventoryProduct.CostPrice == 0
+            ? 0
+            : decimal.Round(
+                ((InventoryProduct.SellingPrice - InventoryProduct.CostPrice) / InventoryProduct.CostPrice) * 100m,
+                2,
+                MidpointRounding.AwayFromZero);
+
+        _updatingInventoryPricing = true;
+        try
+        {
+            SetProperty(ref _inventorySellingPercentage, percentage, nameof(InventorySellingPercentage));
+        }
+        finally
+        {
+            _updatingInventoryPricing = false;
+        }
     }
 
     private async Task RefreshInventoryAsync()

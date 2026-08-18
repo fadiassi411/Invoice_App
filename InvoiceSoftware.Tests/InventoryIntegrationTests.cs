@@ -148,6 +148,95 @@ public sealed class InventoryIntegrationTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => receiptService.CreateForRecordedPaymentAsync(invoice.Id, PaymentMethodType.Cash, null));
     }
 
+    [Fact]
+    public async Task Deleting_regular_receipt_reverses_its_invoice_payment()
+    {
+        await using var fixture = await TestDatabase.CreateAsync();
+        var invoice = new Invoice
+        {
+            ReferenceNumber = "INV-DELETE-RECEIPT", InvoiceNumber = "INV-DELETE-RECEIPT", CustomerId = 1,
+            Status = InvoiceStatus.Finalized,
+            Items = [new InvoiceItem { Description = "Service", Quantity = 1, UnitPrice = 100m, SortOrder = 1 }]
+        };
+        await fixture.InvoiceService().SaveAsync(invoice);
+        var receipt = await fixture.ReceiptService().CreateForInvoiceAsync(invoice.Id, 40m, PaymentMethodType.Cash, null);
+
+        await fixture.ReceiptService().SoftDeleteAsync(receipt.Id);
+        fixture.Db.ChangeTracker.Clear();
+        var stored = await fixture.Db.Invoices.SingleAsync(x => x.Id == invoice.Id);
+        var deletedReceipt = await fixture.Db.Receipts.IgnoreQueryFilters().SingleAsync(x => x.Id == receipt.Id);
+
+        Assert.Equal(0m, stored.AmountPaid);
+        Assert.Equal(100m, stored.RemainingBalance);
+        Assert.True(deletedReceipt.IsDeleted);
+    }
+
+    [Fact]
+    public async Task Deleting_recorded_payment_receipt_does_not_subtract_payment_twice()
+    {
+        await using var fixture = await TestDatabase.CreateAsync();
+        var invoice = new Invoice
+        {
+            ReferenceNumber = "INV-RECORDED-DELETE", InvoiceNumber = "INV-RECORDED-DELETE", CustomerId = 1,
+            Status = InvoiceStatus.Finalized,
+            Items = [new InvoiceItem { Description = "Service", Quantity = 1, UnitPrice = 125m, SortOrder = 1 }]
+        };
+        await fixture.InvoiceService().SaveAsync(invoice);
+        await fixture.InvoiceService().MarkPaidAsync(invoice.Id);
+        var receipt = await fixture.ReceiptService().CreateForRecordedPaymentAsync(invoice.Id, PaymentMethodType.Cash, null);
+
+        await fixture.ReceiptService().SoftDeleteAsync(receipt.Id);
+        fixture.Db.ChangeTracker.Clear();
+        var stored = await fixture.Db.Invoices.SingleAsync(x => x.Id == invoice.Id);
+
+        Assert.Equal(125m, stored.AmountPaid);
+        Assert.Equal(0m, stored.RemainingBalance);
+    }
+
+    [Fact]
+    public async Task Deleting_invoice_also_deletes_linked_receipts()
+    {
+        await using var fixture = await TestDatabase.CreateAsync();
+        var invoice = new Invoice
+        {
+            ReferenceNumber = "INV-WITH-RECEIPT", InvoiceNumber = "INV-WITH-RECEIPT", CustomerId = 1,
+            Status = InvoiceStatus.Finalized,
+            Items = [new InvoiceItem { Description = "Service", Quantity = 1, UnitPrice = 80m, SortOrder = 1 }]
+        };
+        await fixture.InvoiceService().SaveAsync(invoice);
+        var receipt = await fixture.ReceiptService().CreateForInvoiceAsync(invoice.Id, 25m, PaymentMethodType.Cash, null);
+
+        await fixture.InvoiceService().SoftDeleteAsync(invoice.Id);
+        fixture.Db.ChangeTracker.Clear();
+
+        Assert.False(await fixture.Db.Receipts.AnyAsync(x => x.Id == receipt.Id));
+        Assert.True((await fixture.Db.Receipts.IgnoreQueryFilters().SingleAsync(x => x.Id == receipt.Id)).IsDeleted);
+    }
+
+    [Fact]
+    public async Task Changing_invoice_customer_updates_snapshot_and_linked_receipt()
+    {
+        await using var fixture = await TestDatabase.CreateAsync();
+        var invoice = new Invoice
+        {
+            ReferenceNumber = "INV-CUSTOMER-EDIT", InvoiceNumber = "INV-CUSTOMER-EDIT", CustomerId = 1,
+            Status = InvoiceStatus.Finalized,
+            Items = [new InvoiceItem { Description = "Service", Quantity = 1, UnitPrice = 75m, SortOrder = 1 }]
+        };
+        await fixture.InvoiceService().SaveAsync(invoice);
+        var receipt = await fixture.ReceiptService().CreateForInvoiceAsync(invoice.Id, 25m, PaymentMethodType.Cash, null);
+
+        invoice.CustomerId = 2;
+        await fixture.InvoiceService().SaveAsync(invoice);
+        fixture.Db.ChangeTracker.Clear();
+        var storedInvoice = await fixture.Db.Invoices.SingleAsync(x => x.Id == invoice.Id);
+        var storedReceipt = await fixture.Db.Receipts.SingleAsync(x => x.Id == receipt.Id);
+
+        Assert.Equal(2, storedInvoice.CustomerId);
+        Assert.Equal("Northwind Services", storedInvoice.CustomerNameSnapshot);
+        Assert.Equal(2, storedReceipt.CustomerId);
+    }
+
     private static Product NewProduct(string code, decimal quantity) => new()
     {
         Code = code, Name = "Test Product", Description = "Test product description", Unit = "Piece",
