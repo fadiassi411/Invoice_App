@@ -5,6 +5,7 @@
         xmlns:models="clr-namespace:InvoiceSoftware.Core.Models;assembly=InvoiceSoftware.Core"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="Invoice Management Software"
+        Icon="Assets/InvoiceMaker.ico"
         Width="1320" Height="860" MinWidth="1120" MinHeight="720"
         Background="{StaticResource BackgroundBrush}">
     <Window.Resources>
@@ -603,6 +604,12 @@
                                                         Click="InvoiceActionsButton_Click" ToolTip="Invoice actions" AutomationProperties.Name="Invoice actions menu">
                                                     <Button.ContextMenu>
                                                         <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                            <MenuItem Header="Modify Invoice" Style="{StaticResource InvoiceActionMenuItem}"
+                                                                      Command="{Binding PlacementTarget.Tag.EditInvoiceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                <MenuItem.Icon><TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" Foreground="#176DB5" /></MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <Separator Margin="5,4" />
                                                             <MenuItem Header="View / Generate Invoice PDF" Style="{StaticResource InvoiceActionMenuItem}"
                                                                       Command="{Binding PlacementTarget.Tag.ExportInvoicePdfCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
@@ -1084,13 +1091,35 @@
                                         <DataGridTextColumn Header="Invoice" Binding="{Binding Invoice.ReferenceNumber}" Width="140" />
                                         <DataGridTextColumn Header="Amount" Binding="{Binding PaymentAmount, StringFormat=N2}" Width="100" />
                                         <DataGridTextColumn Header="Method" Binding="{Binding PaymentMethod}" Width="120" />
-                                        <DataGridTemplateColumn Header="Actions" Width="250">
+                                        <DataGridTemplateColumn Header="Actions" Width="105" MinWidth="100">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Button Content="Receipt PDF" Command="{Binding DataContext.ExportReceiptPdfCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
-                                                        <Button Content="Receipt Print" Command="{Binding DataContext.PrintReceiptCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
-                                                    </StackPanel>
+                                                    <Button Content="Actions  &#x25BE;" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="88" Padding="10,6"
+                                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Click="InvoiceActionsButton_Click" ToolTip="Receipt actions" AutomationProperties.Name="Receipt actions menu">
+                                                        <Button.ContextMenu>
+                                                            <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                                <MenuItem Header="Modify Receipt" Style="{StaticResource InvoiceActionMenuItem}"
+                                                                          Command="{Binding PlacementTarget.Tag.EditReceiptCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                    <MenuItem.Icon><TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" Foreground="#176DB5" /></MenuItem.Icon>
+                                                                </MenuItem>
+                                                                <Separator Margin="5,4" />
+                                                                <MenuItem Header="View / Generate Receipt PDF" Style="{StaticResource InvoiceActionMenuItem}"
+                                                                          Command="{Binding PlacementTarget.Tag.ExportReceiptPdfCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                                <MenuItem Header="Print Receipt" Style="{StaticResource InvoiceActionMenuItem}"
+                                                                          Command="{Binding PlacementTarget.Tag.PrintReceiptCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                                <Separator Margin="5,4" />
+                                                                <MenuItem Header="Delete Receipt" Style="{StaticResource InvoiceDeleteMenuItem}"
+                                                                          Command="{Binding PlacementTarget.Tag.DeleteReceiptCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                    <MenuItem.Icon><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Foreground="#B91C1C" /></MenuItem.Icon>
+                                                                </MenuItem>
+                                                            </ContextMenu>
+                                                        </Button.ContextMenu>
+                                                    </Button>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>

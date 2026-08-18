@@ -32,6 +32,19 @@ public sealed class InvoiceService(InvoiceDbContext db, IReferenceNumberService 
     {
         if (invoice.DueDate < invoice.InvoiceDate) throw new InvalidOperationException("Due date cannot be earlier than invoice date.");
         if (invoice.Items.Count == 0) throw new InvalidOperationException("Add at least one invoice item.");
+        var customer = await db.Customers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == invoice.CustomerId, cancellationToken)
+            ?? throw new InvalidOperationException("Customer was not found.");
+        invoice.CustomerNameSnapshot = customer.Name;
+        invoice.CustomerAttentionNameSnapshot = customer.AttentionName;
+        invoice.CustomerAddressSnapshot = customer.Address;
+        invoice.CustomerTelephoneSnapshot = customer.Telephone;
+        invoice.CustomerTaxNumberSnapshot = customer.TaxNumber;
+        invoice.Customer = null;
+        foreach (var receipt in invoice.Receipts)
+        {
+            receipt.CustomerId = customer.Id;
+            receipt.Customer = null;
+        }
         foreach (var item in invoice.Items)
         {
             if (item.Quantity <= 0) throw new InvalidOperationException("Invoice quantity must be greater than zero.");
@@ -76,6 +89,8 @@ public sealed class InvoiceService(InvoiceDbContext db, IReferenceNumberService 
         {
             var retainedItemIds = invoice.Items.Where(x => x.Id != 0).Select(x => x.Id).ToList();
             await db.InvoiceItems.Where(x => x.InvoiceId == invoice.Id && !retainedItemIds.Contains(x.Id)).ExecuteDeleteAsync(cancellationToken);
+            await db.Receipts.Where(x => x.InvoiceId == invoice.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.CustomerId, customer.Id), cancellationToken);
             db.Invoices.Update(invoice);
             db.AuditLogs.Add(new AuditLog { Action = "Modify", EntityName = nameof(Invoice), EntityId = invoice.Id, Details = invoice.ReferenceNumber });
         }
@@ -99,7 +114,7 @@ public sealed class InvoiceService(InvoiceDbContext db, IReferenceNumberService 
     public async Task SoftDeleteAsync(int invoiceId, CancellationToken cancellationToken = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var invoice = await db.Invoices.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == invoiceId, cancellationToken) ?? throw new InvalidOperationException("Invoice was not found.");
+        var invoice = await db.Invoices.Include(x => x.Items).Include(x => x.Receipts).FirstOrDefaultAsync(x => x.Id == invoiceId, cancellationToken) ?? throw new InvalidOperationException("Invoice was not found.");
         if (invoice.Status == InvoiceStatus.Finalized)
         {
             var productIds = invoice.Items.Where(x => x.ProductId != null).Select(x => x.ProductId!.Value).Distinct().ToList();
@@ -111,6 +126,18 @@ public sealed class InvoiceService(InvoiceDbContext db, IReferenceNumberService 
         }
         invoice.IsDeleted = true;
         invoice.DeletedAt = DateTime.UtcNow;
+        foreach (var receipt in invoice.Receipts)
+        {
+            receipt.IsDeleted = true;
+            receipt.DeletedAt = DateTime.UtcNow;
+            db.AuditLogs.Add(new AuditLog
+            {
+                Action = "SoftDeleteWithInvoice",
+                EntityName = nameof(Receipt),
+                EntityId = receipt.Id,
+                Details = $"{receipt.ReferenceNumber} with {invoice.ReferenceNumber}"
+            });
+        }
         db.AuditLogs.Add(new AuditLog { Action = "SoftDelete", EntityName = nameof(Invoice), EntityId = invoice.Id, Details = invoice.ReferenceNumber });
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);

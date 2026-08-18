@@ -93,4 +93,63 @@ public sealed class ReceiptService(InvoiceDbContext db, IReferenceNumberService 
         receipt.Customer = await db.Customers.FindAsync([invoice.CustomerId], cancellationToken);
         return receipt;
     }
+
+    public async Task UpdateAsync(int receiptId, DateTime receiptDate, PaymentMethodType paymentMethod, string? transactionReference,
+        string? notes, string? receivedBy, CancellationToken cancellationToken = default)
+    {
+        var receipt = await db.Receipts.FirstOrDefaultAsync(x => x.Id == receiptId, cancellationToken)
+            ?? throw new InvalidOperationException("Receipt was not found.");
+
+        receipt.ReceiptDate = receiptDate.Date;
+        receipt.PaymentMethod = paymentMethod;
+        receipt.TransactionReference = Clean(transactionReference);
+        receipt.Notes = Clean(notes);
+        receipt.ReceivedBy = Clean(receivedBy);
+        db.AuditLogs.Add(new AuditLog
+        {
+            Action = "Modify",
+            EntityName = nameof(Receipt),
+            EntityId = receipt.Id,
+            Details = receipt.ReferenceNumber
+        });
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SoftDeleteAsync(int receiptId, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var receipt = await db.Receipts.FirstOrDefaultAsync(x => x.Id == receiptId, cancellationToken)
+            ?? throw new InvalidOperationException("Receipt was not found.");
+
+        if (receipt.InvoiceId is int invoiceId && await AppliesToInvoiceBalanceAsync(receipt, cancellationToken))
+        {
+            var invoice = await db.Invoices.IgnoreQueryFilters().Include(x => x.Items)
+                .FirstOrDefaultAsync(x => x.Id == invoiceId, cancellationToken);
+            if (invoice is not null)
+            {
+                invoice.AmountPaid = Math.Max(0m, invoice.AmountPaid - receipt.PaymentAmount);
+                calculator.Calculate(invoice);
+            }
+        }
+
+        receipt.IsDeleted = true;
+        receipt.DeletedAt = DateTime.UtcNow;
+        db.AuditLogs.Add(new AuditLog
+        {
+            Action = "SoftDelete",
+            EntityName = nameof(Receipt),
+            EntityId = receipt.Id,
+            Details = receipt.ReferenceNumber
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private Task<bool> AppliesToInvoiceBalanceAsync(Receipt receipt, CancellationToken cancellationToken)
+        => db.AuditLogs.AnyAsync(x => x.Action == "CreateReceipt"
+            && x.Details != null
+            && x.Details.StartsWith(receipt.ReferenceNumber + " for "), cancellationToken);
+
+    private static string? Clean(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
