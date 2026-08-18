@@ -2,6 +2,18 @@
 
 Professional offline invoice management desktop application built with C#, .NET 8, WPF, MVVM, SQLite, Entity Framework Core, and QuestPDF.
 
+## Download And Run The Application
+
+1. Open the [latest Invoice Software release](https://github.com/fadiassi411/Invoice_App/releases/latest).
+2. Under **Assets**, download the file named `InvoiceSoftwareApp-vX.X.X-Windows-x64.zip`.
+3. Extract the complete ZIP file to a normal folder. Do not run the application from inside the ZIP.
+4. Keep all extracted files and the `LatoFont` folder together.
+5. Double-click `InvoiceSoftware.App.exe` to start the application.
+
+The release is self-contained, so the customer does not need to install .NET. Application data is stored separately under `%LOCALAPPDATA%\InvoiceSoftware`, so installing a newer version does not delete existing invoices, customers, receipts, quotations, or inventory data.
+
+> **Important:** **Code → Download ZIP** downloads the source code for developers. Customers should download the ready-to-use Windows ZIP from the **Releases** page instead.
+
 ## Visual Structure From The Supplied Invoice
 
 The print/PDF layout follows the reference invoice: company logo and contact details at top-left, large `INVOICE` title and date/reference/due-date metadata at top-right, a dark blue `BILL TO` band, striped item table with description and amount columns, comments/terms block under the table, totals aligned on the lower-right, signature/stamp area, thank-you message, and footer with the invoice reference and page numbering.
