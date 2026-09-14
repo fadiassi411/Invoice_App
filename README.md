@@ -1,5 +1,11 @@
 # Invoice Management Software
 
+## License activation (v1.2.1)
+
+Invoice Maker v1.2.1 requires a signed, installation-specific `.invoicelicense` file. On first start, copy the displayed `INV-...` installation ID and send it to the supplier. The supplier creates the license with **MicroBrain License Manager v4.3.0** by selecting **Invoice App**. Use **Activate License** to import the returned file.
+
+The application validates the ECDSA signature, Invoice App product/format, machine-derived installation ID, issue date, and optional expiry date before opening. The public verification key is embedded in the application; the private supplier key is never included. The installed license is stored separately from the SQLite database under `%LOCALAPPDATA%\InvoiceSoftware`, so database backup/restore does not transfer a license to another computer.
+
 Professional offline invoice management desktop application built with C#, .NET 8, WPF, MVVM, SQLite, Entity Framework Core, and QuestPDF.
 
 ## Download And Run The Application

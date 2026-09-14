@@ -1218,6 +1218,38 @@
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Application Settings}">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="License and activation" FontSize="20" FontWeight="SemiBold" Foreground="#17365D" />
+                                <TextBlock Text="Invoice Maker is licensed to this computer using the installation ID below." Foreground="#5A6B80" Margin="0,4,0,14" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Application version" FontWeight="SemiBold" Margin="0,4" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ApplicationVersion}" Margin="0,4" />
+                                    <TextBlock Grid.Row="1" Text="License status" FontWeight="SemiBold" Margin="0,4" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LicenseStatus}" Margin="0,4" />
+                                    <TextBlock Grid.Row="2" Text="Licensed customer" FontWeight="SemiBold" Margin="0,4" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LicenseCustomer}" Margin="0,4" />
+                                    <TextBlock Grid.Row="3" Text="Edition / expiry" FontWeight="SemiBold" Margin="0,4" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,4"><Run Text="{Binding LicenseEdition}"/><Run Text="  •  "/><Run Text="{Binding LicenseExpiry}"/></TextBlock>
+                                    <TextBlock Grid.Row="4" Text="Installation ID" FontWeight="SemiBold" Margin="0,4" />
+                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding InstallationId}" IsReadOnly="True" FontFamily="Consolas" />
+                                    <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Text="{Binding LicenseMessage}" TextWrapping="Wrap" Foreground="#527095" Margin="0,12,0,0" />
+                                </Grid>
+                                <Button Content="Activate / Replace License" Command="{Binding ActivateLicenseCommand}" HorizontalAlignment="Left" Margin="0,14,0,0" />
+                            </StackPanel>
+                        </Border>
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="Database location" FontWeight="SemiBold" />
