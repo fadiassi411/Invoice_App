@@ -10,6 +10,7 @@ using System.Text;
 using InvoiceSoftware.App;
 using InvoiceSoftware.Core.Models;
 using InvoiceSoftware.Data;
+using InvoiceSoftware.Licensing;
 using InvoiceSoftware.Reporting;
 using InvoiceSoftware.Services;
 using Microsoft.Win32;
@@ -25,6 +26,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IBackupService _backup;
     private readonly IInventoryService _inventory;
     private readonly IInvoicePdfService _pdf;
+    private readonly IInvoiceLicenseService _licenseService;
 
     private string _selectedSection = "Dashboard";
     private string _statusMessage = "Ready";
@@ -48,8 +50,9 @@ public sealed class MainViewModel : ObservableObject
     private Supplier? _selectedSupplier;
     private DateTime? _reportFrom = DateTime.Today.AddMonths(-1);
     private DateTime? _reportTo = DateTime.Today;
+    private InvoiceLicenseStatus _licenseStatus;
 
-    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory, QuotationWorkspaceViewModel quotations)
+    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory, QuotationWorkspaceViewModel quotations, IInvoiceLicenseService licenseService)
     {
         _lookup = lookup;
         _invoices = invoices;
@@ -58,6 +61,8 @@ public sealed class MainViewModel : ObservableObject
         _backup = backup;
         _pdf = pdf;
         _inventory = inventory;
+        _licenseService = licenseService;
+        _licenseStatus = licenseService.GetStatus();
         Quotations = quotations;
         Quotations.OpenEditorRequested = () => SelectedSection = "New Quotation";
         Quotations.CloseEditorRequested = () => SelectedSection = "Quotations";
@@ -121,6 +126,7 @@ public sealed class MainViewModel : ObservableObject
         RefreshReportsCommand = new RelayCommand(RefreshReportsAsync);
         ExportStockReportCommand = new RelayCommand(ExportStockReportAsync);
         ExportProfitReportCommand = new RelayCommand(ExportProfitReportAsync);
+        ActivateLicenseCommand = new RelayCommand(ActivateLicenseAsync);
         _ = RefreshAsync();
     }
 
@@ -184,6 +190,15 @@ public sealed class MainViewModel : ObservableObject
     public ICommand RefreshReportsCommand { get; }
     public ICommand ExportStockReportCommand { get; }
     public ICommand ExportProfitReportCommand { get; }
+    public ICommand ActivateLicenseCommand { get; }
+
+    public string ApplicationVersion => "1.2.1";
+    public string InstallationId => _licenseService.InstallationId;
+    public string LicenseStatus => _licenseStatus.IsLicensed ? "Licensed" : "Not licensed";
+    public string LicenseCustomer => _licenseStatus.CustomerName ?? "-";
+    public string LicenseEdition => _licenseStatus.Edition ?? "-";
+    public string LicenseExpiry => _licenseStatus.ExpiresAtUtc is null ? (_licenseStatus.IsLicensed ? "Perpetual" : "-") : _licenseStatus.ExpiresAtUtc.Value.ToString("yyyy-MM-dd");
+    public string LicenseMessage => _licenseStatus.Message;
 
     public string SelectedSection
     {
@@ -279,6 +294,20 @@ public sealed class MainViewModel : ObservableObject
     public Supplier? SelectedSupplier { get => _selectedSupplier; set => SetProperty(ref _selectedSupplier, value); }
     public DateTime? ReportFrom { get => _reportFrom; set => SetProperty(ref _reportFrom, value); }
     public DateTime? ReportTo { get => _reportTo; set => SetProperty(ref _reportTo, value); }
+
+    private Task ActivateLicenseAsync()
+    {
+        var dialog = new LicenseActivationWindow(_licenseService) { Owner = Application.Current.MainWindow };
+        dialog.ShowDialog();
+        _licenseStatus = _licenseService.GetStatus();
+        Raise(nameof(LicenseStatus));
+        Raise(nameof(LicenseCustomer));
+        Raise(nameof(LicenseEdition));
+        Raise(nameof(LicenseExpiry));
+        Raise(nameof(LicenseMessage));
+        StatusMessage = _licenseStatus.Message;
+        return Task.CompletedTask;
+    }
 
     private async Task NavigateAsync(string? section)
     {

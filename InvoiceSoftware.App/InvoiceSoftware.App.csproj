@@ -6,6 +6,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\InvoiceMaker.ico</ApplicationIcon>
+    <AssemblyName>InvoiceSoftware.App</AssemblyName>
+    <Product>Invoice Maker</Product>
+    <Company>MicroBrain Embedded System Solutions</Company>
+    <Description>Professional offline invoice and stock management software.</Description>
+    <Version>1.2.1</Version>
+    <FileVersion>1.2.1.0</FileVersion>
+    <AssemblyVersion>1.2.1.0</AssemblyVersion>
+    <InformationalVersion>1.2.1</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Assets\InvoiceMaker.ico" />
@@ -27,5 +36,6 @@
     <ProjectReference Include="..\InvoiceSoftware.Data\InvoiceSoftware.Data.csproj" />
     <ProjectReference Include="..\InvoiceSoftware.Reporting\InvoiceSoftware.Reporting.csproj" />
     <ProjectReference Include="..\InvoiceSoftware.Services\InvoiceSoftware.Services.csproj" />
+    <ProjectReference Include="..\InvoiceSoftware.Licensing\InvoiceSoftware.Licensing.csproj" />
   </ItemGroup>
 </Project>

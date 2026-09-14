@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using InvoiceSoftware.App.ViewModels;
 using InvoiceSoftware.Data;
+using InvoiceSoftware.Licensing;
 using InvoiceSoftware.Reporting;
 using InvoiceSoftware.Services;
 using Microsoft.EntityFrameworkCore;
@@ -16,18 +17,32 @@ public partial class App : Application
 
     private async void OnStartup(object sender, StartupEventArgs e)
     {
-        ApplyPendingRestore();
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddDebug());
         services.AddDbContext<InvoiceDbContext>(options => options.UseSqlite(DatabasePaths.ConnectionString));
         services.AddInvoiceServices();
+        services.AddSingleton<IInvoiceLicenseService, InvoiceLicenseService>();
         services.AddScoped<IInvoicePdfService, InvoicePdfService>();
         services.AddScoped<IQuotationPdfService, QuotationPdfService>();
         services.AddSingleton<QuotationWorkspaceViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
         _services = services.BuildServiceProvider();
+
+        var licenseService = _services.GetRequiredService<IInvoiceLicenseService>();
+        if (!licenseService.GetStatus().IsLicensed)
+        {
+            var activation = new LicenseActivationWindow(licenseService);
+            if (activation.ShowDialog() != true || !licenseService.GetStatus().IsLicensed)
+            {
+                Shutdown();
+                return;
+            }
+        }
+
+        ApplyPendingRestore();
 
         using (var scope = _services.CreateScope())
         {
@@ -37,7 +52,9 @@ public partial class App : Application
 
         var window = _services.GetRequiredService<MainWindow>();
         window.DataContext = _services.GetRequiredService<MainViewModel>();
+        MainWindow = window;
         window.Show();
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
     }
 
     private void OnExit(object sender, ExitEventArgs e) => _services?.Dispose();

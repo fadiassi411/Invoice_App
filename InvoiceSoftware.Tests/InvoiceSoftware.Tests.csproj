@@ -21,5 +21,6 @@
     <ProjectReference Include="..\InvoiceSoftware.Data\InvoiceSoftware.Data.csproj" />
     <ProjectReference Include="..\InvoiceSoftware.Services\InvoiceSoftware.Services.csproj" />
     <ProjectReference Include="..\InvoiceSoftware.Reporting\InvoiceSoftware.Reporting.csproj" />
+    <ProjectReference Include="..\InvoiceSoftware.Licensing\InvoiceSoftware.Licensing.csproj" />
   </ItemGroup>
 </Project>

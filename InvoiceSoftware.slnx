@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="InvoiceSoftware.App/InvoiceSoftware.App.csproj" />
   <Project Path="InvoiceSoftware.Core/InvoiceSoftware.Core.csproj" />
+  <Project Path="InvoiceSoftware.Licensing/InvoiceSoftware.Licensing.csproj" />
   <Project Path="InvoiceSoftware.Data/InvoiceSoftware.Data.csproj" />
   <Project Path="InvoiceSoftware.Reporting/InvoiceSoftware.Reporting.csproj" />
   <Project Path="InvoiceSoftware.Services/InvoiceSoftware.Services.csproj" />
