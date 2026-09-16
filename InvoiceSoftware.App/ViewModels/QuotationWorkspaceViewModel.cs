@@ -33,6 +33,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     private DateTime? _filterTo;
     private string _filterStatus = "All";
     private string _filterValidity = "All";
+    private bool _includeArchived;
     private string _stockWarning = "";
     private bool _hasUnsavedChanges;
 
@@ -140,6 +141,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     public DateTime? FilterTo { get => _filterTo; set => SetProperty(ref _filterTo, value); }
     public string FilterStatus { get => _filterStatus; set => SetProperty(ref _filterStatus, value); }
     public string FilterValidity { get => _filterValidity; set => SetProperty(ref _filterValidity, value); }
+    public bool IncludeArchived { get => _includeArchived; set => SetProperty(ref _includeArchived, value); }
     public string StockWarning { get => _stockWarning; private set => SetProperty(ref _stockWarning, value); }
     public bool HasUnsavedChanges { get => _hasUnsavedChanges; private set => SetProperty(ref _hasUnsavedChanges, value); }
     public bool CanEditCurrent => CurrentQuotation?.Status is QuotationStatus.Draft or QuotationStatus.Sent or QuotationStatus.UnderReview or QuotationStatus.Rejected;
@@ -259,7 +261,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     {
         QuotationStatus? status = Enum.TryParse<QuotationStatus>(FilterStatus, out var parsed) ? parsed : null;
         var validity = Enum.TryParse<QuotationValidityFilter>(FilterValidity, out var parsedValidity) ? parsedValidity : QuotationValidityFilter.All;
-        await Replace(Quotations, await _service.SearchAsync(new QuotationSearchCriteria(SearchText, FilterCustomer?.Id, FilterFrom, FilterTo, status, validity)));
+        await Replace(Quotations, await _service.SearchAsync(new QuotationSearchCriteria(SearchText, FilterCustomer?.Id, FilterFrom, FilterTo, status, validity, IncludeArchived)));
         Statistics = await _service.GetStatisticsAsync();
         StatusMessage = $"{Quotations.Count} quotation(s) found.";
     }

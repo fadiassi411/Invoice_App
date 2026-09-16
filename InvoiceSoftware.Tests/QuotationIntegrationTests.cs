@@ -127,6 +127,21 @@ public sealed class QuotationIntegrationTests
     }
 
     [Fact]
+    public async Task Archived_quotation_can_be_found_and_permanently_deleted()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var quotation = await fixture.Service.CreateDraftAsync(1);
+        quotation.Items.Add(new QuotationItem { DescriptionSnapshot = "Test item", Quantity = 1, UnitPrice = 10 });
+        await fixture.Service.SaveAsync(quotation);
+        await fixture.Service.ArchiveAsync(quotation.Id);
+
+        Assert.Empty(await fixture.Service.SearchAsync(new QuotationSearchCriteria(quotation.QuotationNumber)));
+        Assert.Single(await fixture.Service.SearchAsync(new QuotationSearchCriteria(quotation.QuotationNumber, IncludeArchived: true)));
+        await fixture.Service.DeleteAsync(quotation.Id);
+        Assert.Empty(await fixture.Service.SearchAsync(new QuotationSearchCriteria(quotation.QuotationNumber, IncludeArchived: true)));
+    }
+
+    [Fact]
     public async Task Delete_blocks_quotation_linked_to_invoice()
     {
         await using var fixture = await Fixture.CreateAsync();

@@ -903,6 +903,7 @@
                                     <DatePicker Width="125" SelectedDate="{Binding FilterTo}" ToolTip="To date" />
                                     <ComboBox Width="145" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding FilterStatus}" ToolTip="Status" />
                                     <ComboBox Width="120" ItemsSource="{Binding ValidityFilters}" SelectedItem="{Binding FilterValidity}" ToolTip="Validity" />
+                                    <CheckBox Content="Include archived" IsChecked="{Binding IncludeArchived}" VerticalAlignment="Center" Margin="6,0,10,0" />
                                     <Button Content="Search" Command="{Binding SearchCommand}" />
                                     <Button Content="New Quotation" Command="{Binding NewCommand}" />
                                     <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" />
@@ -925,6 +926,7 @@
                                         <DataGridTextColumn Header="Currency" Binding="{Binding CurrencyCode}" Width="65"/>
                                         <DataGridTextColumn Header="Valid Until" Binding="{Binding ValidUntil, StringFormat=d}" Width="90"/>
                                         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130"/>
+                                        <DataGridCheckBoxColumn Header="Archived" Binding="{Binding IsArchived}" Width="75"/>
                                         <DataGridTextColumn Header="Created By" Binding="{Binding CreatedBy}" Width="95"/>
                                         <DataGridTextColumn Header="Last Modified" Binding="{Binding ModifiedAt, StringFormat=g}" Width="130"/>
                                     </DataGrid.Columns>
