@@ -441,7 +441,7 @@
                             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Active products" /><TextBlock Text="{Binding Snapshot.TotalActiveProducts}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
                             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Stock quantity" /><TextBlock Text="{Binding Snapshot.TotalQuantityInStock, StringFormat={}{0:0.####}}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
                             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Inventory cost value" /><TextBlock Text="{Binding Snapshot.TotalInventoryCostValue, StringFormat=N2}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
-                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Low / out of stock" /><TextBlock FontSize="24" FontWeight="Bold"><Run Text="{Binding Snapshot.LowStockProducts}"/><Run Text=" / "/><Run Text="{Binding Snapshot.OutOfStockProducts}"/></TextBlock></StackPanel></Border>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Low / out of stock" /><TextBlock FontSize="24" FontWeight="Bold"><Run Text="{Binding Snapshot.LowStockProducts, Mode=OneWay}"/><Run Text=" / "/><Run Text="{Binding Snapshot.OutOfStockProducts, Mode=OneWay}"/></TextBlock></StackPanel></Border>
                             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Sales today" /><TextBlock Text="{Binding Snapshot.SalesToday, StringFormat=N2}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
                             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Gross profit today" /><TextBlock Text="{Binding Snapshot.GrossProfitToday, StringFormat=N2}" FontSize="24" FontWeight="Bold" /></StackPanel></Border>
                         </UniformGrid>
@@ -536,7 +536,7 @@
                                     <TextBlock Text="Customer" FontWeight="SemiBold" />
                                     <ComboBox ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}" DisplayMemberPath="Name" />
                                     <TextBlock Text="Invoice #" FontWeight="SemiBold" />
-                                    <TextBox Text="{Binding SelectedInvoice.ReferenceNumber}" IsReadOnly="True" FontWeight="SemiBold" Background="#F3F7FC" />
+                                    <TextBox Text="{Binding SelectedInvoice.ReferenceNumber, Mode=OneWay}" IsReadOnly="True" FontWeight="SemiBold" Background="#F3F7FC" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="Invoice date" FontWeight="SemiBold" />
@@ -709,13 +709,13 @@
                                         <ComboBox ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}" DisplayMemberPath="Name" />
                                         <Button Content="Apply Customer" Command="{Binding ApplyCustomerCommand}" HorizontalAlignment="Left" ToolTip="Store the selected customer details in this quotation" />
                                         <TextBlock Text="Quotation number" FontWeight="SemiBold" />
-                                        <TextBox Text="{Binding CurrentQuotation.QuotationNumber}" IsReadOnly="True" Background="#F3F7FC" FontWeight="SemiBold" />
-                                        <TextBlock Text="Revision" /><TextBox Text="{Binding CurrentQuotation.RevisionNumber}" IsReadOnly="True" />
+                                        <TextBox Text="{Binding CurrentQuotation.QuotationNumber, Mode=OneWay}" IsReadOnly="True" Background="#F3F7FC" FontWeight="SemiBold" />
+                                        <TextBlock Text="Revision" /><TextBox Text="{Binding CurrentQuotation.RevisionNumber, Mode=OneWay}" IsReadOnly="True" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="0,0,8,0">
                                         <TextBlock Text="Quotation date *" /><DatePicker SelectedDate="{Binding CurrentQuotation.QuotationDate}" />
                                         <TextBlock Text="Valid until *" /><DatePicker SelectedDate="{Binding CurrentQuotation.ValidUntil}" />
-                                        <TextBlock Text="Status" /><TextBox Text="{Binding CurrentQuotation.Status}" IsReadOnly="True" />
+                                        <TextBlock Text="Status" /><TextBox Text="{Binding CurrentQuotation.Status, Mode=OneWay}" IsReadOnly="True" />
                                         <TextBlock Text="Customer enquiry / reference" /><TextBox Text="{Binding CurrentQuotation.CustomerReference, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Margin="0,0,8,0">
@@ -1074,7 +1074,7 @@
                                         <CheckBox Content="Active" IsChecked="{Binding InventoryProduct.IsActive}" Margin="4"/>
                                         <TextBlock Text="Notes"/><TextBox Text="{Binding InventoryProduct.Notes}" Height="90" AcceptsReturn="True" TextWrapping="Wrap"/>
                                         <TextBlock Text="Created / Last Modified" FontWeight="SemiBold" Margin="4"/>
-                                        <TextBlock><Run Text="{Binding InventoryProduct.CreatedAt, StringFormat=g}"/><Run Text="  /  "/><Run Text="{Binding InventoryProduct.ModifiedAt, StringFormat=g}"/></TextBlock>
+                                        <TextBlock><Run Text="{Binding InventoryProduct.CreatedAt, StringFormat=g, Mode=OneWay}"/><Run Text="  /  "/><Run Text="{Binding InventoryProduct.ModifiedAt, StringFormat=g, Mode=OneWay}"/></TextBlock>
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
@@ -1258,9 +1258,9 @@
                                     <TextBlock Grid.Row="2" Text="Licensed customer" FontWeight="SemiBold" Margin="0,4" />
                                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LicenseCustomer}" Margin="0,4" />
                                     <TextBlock Grid.Row="3" Text="Edition / expiry" FontWeight="SemiBold" Margin="0,4" />
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,4"><Run Text="{Binding LicenseEdition}"/><Run Text="  •  "/><Run Text="{Binding LicenseExpiry}"/></TextBlock>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,4"><Run Text="{Binding LicenseEdition, Mode=OneWay}"/><Run Text="  •  "/><Run Text="{Binding LicenseExpiry, Mode=OneWay}"/></TextBlock>
                                     <TextBlock Grid.Row="4" Text="Installation ID" FontWeight="SemiBold" Margin="0,4" />
-                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding InstallationId}" IsReadOnly="True" FontFamily="Consolas" />
+                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding InstallationId, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" />
                                     <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Text="{Binding LicenseMessage}" TextWrapping="Wrap" Foreground="#527095" Margin="0,12,0,0" />
                                 </Grid>
                                 <Button Content="Activate / Replace License" Command="{Binding ActivateLicenseCommand}" HorizontalAlignment="Left" Margin="0,14,0,0" />

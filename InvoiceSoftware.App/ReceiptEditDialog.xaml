@@ -32,7 +32,7 @@
 
             <StackPanel Grid.Row="2" Margin="0,0,0,10">
                 <TextBlock Text="Payment amount" FontWeight="SemiBold" />
-                <TextBox Text="{Binding PaymentAmountDisplay}" IsReadOnly="True" Background="#F3F7FC" />
+                <TextBox Text="{Binding PaymentAmountDisplay, Mode=OneWay}" IsReadOnly="True" Background="#F3F7FC" />
                 <TextBlock Text="The amount is locked to protect the invoice balance. Delete and recreate the receipt if the amount is wrong."
                            Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
             </StackPanel>
