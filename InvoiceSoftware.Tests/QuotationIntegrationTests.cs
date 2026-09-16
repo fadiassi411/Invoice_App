@@ -273,10 +273,12 @@ public sealed class QuotationIntegrationTests
             var privatePrices = QuoteForPdf(2);
             privatePrices.HideItemPricesOnPdf = true;
             privatePrices.Items[0].DescriptionSnapshot = "VISIBLE_ITEM_MARKER";
+            privatePrices.Items[0].PartNumberSnapshot = "PARTNO-001";
             privatePrices.Items[1].DescriptionSnapshot = "HIDDEN_ITEM_MARKER";
             privatePrices.Items[1].HideOnPdf = true;
             calculator.Calculate(privatePrices);
             var privatePath = Path.Combine(folder, "private.pdf"); service.ExportQuotation(privatePrices, company, privatePath);
+            Assert.Throws<InvalidOperationException>(() => service.ExportQuotation(new Quotation { GrandTotal = 100 }, company, Path.Combine(folder, "empty.pdf")));
             Assert.True(new FileInfo(onePath).Length > 1_000);
             Assert.True(new FileInfo(manyPath).Length > new FileInfo(onePath).Length);
             Assert.True(new FileInfo(privatePath).Length > 1_000);

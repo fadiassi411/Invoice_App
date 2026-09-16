@@ -179,8 +179,13 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
 
     public void Recalculate()
     {
-        if (CurrentQuotation is null || Items.Count == 0) return;
+        if (CurrentQuotation is null) return;
         CurrentQuotation.Items = Items.ToList();
+        if (Items.Count == 0)
+        {
+            StockWarning = "";
+            return;
+        }
         try
         {
             _calculator.Calculate(CurrentQuotation);
@@ -219,9 +224,8 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
 
     private async Task PreviewAsync()
     {
-        var quotation = RequireCurrent();
-        Recalculate();
-        var file = Path.Combine(Path.GetTempPath(), $"{SafeFileName(quotation.DisplayNumber)}-preview.pdf");
+        var quotation = PrepareQuotationForPdf();
+        var file = Path.Combine(Path.GetTempPath(), $"{SafeFileName(quotation.DisplayNumber)}-preview-{Guid.NewGuid():N}.pdf");
         _pdf.ExportQuotation(quotation, Company, file);
         Open(file);
         StatusMessage = $"Preview opened for {quotation.DisplayNumber}.";
@@ -230,8 +234,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
 
     private async Task ExportPdfAsync()
     {
-        var quotation = RequireCurrent();
-        Recalculate();
+        var quotation = PrepareQuotationForPdf();
         var customer = SafeFileName(quotation.CustomerCompanySnapshot ?? quotation.CustomerNameSnapshot);
         var dialog = new SaveFileDialog
         {
@@ -248,9 +251,8 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
 
     private async Task PrintAsync()
     {
-        var quotation = RequireCurrent();
-        Recalculate();
-        var file = Path.Combine(Path.GetTempPath(), $"{SafeFileName(quotation.DisplayNumber)}-print.pdf");
+        var quotation = PrepareQuotationForPdf();
+        var file = Path.Combine(Path.GetTempPath(), $"{SafeFileName(quotation.DisplayNumber)}-print-{Guid.NewGuid():N}.pdf");
         _pdf.ExportQuotation(quotation, Company, file);
         Open(file);
         StatusMessage = "The quotation opened in the PDF viewer. Select a printer or press Ctrl+P.";
@@ -426,6 +428,15 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     private void RefreshItems() { var selected = SelectedLine; var rows = Items.ToList(); Items.Clear(); foreach (var row in rows) Items.Add(row); SelectedLine = selected; }
     private void EnsureCurrent() { if (CurrentQuotation is null) throw new InvalidOperationException("Create or open a quotation first."); }
     private Quotation RequireCurrent() { EnsureCurrent(); return CurrentQuotation!; }
+    private Quotation PrepareQuotationForPdf()
+    {
+        var quotation = RequireCurrent();
+        quotation.Items = Items.ToList();
+        if (quotation.Items.Count == 0)
+            throw new InvalidOperationException("No quotation items are loaded. Reopen the quotation before creating its PDF.");
+        _calculator.Calculate(quotation);
+        return quotation;
+    }
     private bool ConfirmDiscard() => !HasUnsavedChanges || MessageBox.Show("This quotation has unsaved changes. Discard them?", "Unsaved quotation", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
 
     private string BuildStockWarning()

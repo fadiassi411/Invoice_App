@@ -24,6 +24,8 @@ public sealed class QuotationPdfService : IQuotationPdfService
     {
         ArgumentNullException.ThrowIfNull(quotation);
         ArgumentNullException.ThrowIfNull(company);
+        if (quotation.Items.Count == 0)
+            throw new InvalidOperationException("A quotation PDF cannot be created without item rows.");
         Document.Create(document => document.Page(page =>
         {
             page.Size(PageSizes.A4);
@@ -102,7 +104,7 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 table.ColumnsDefinition(columns =>
                 {
                     columns.ConstantColumn(24);
-                    columns.ConstantColumn(62);
+                    columns.ConstantColumn(quotation.HideItemPricesOnPdf ? 90 : 62);
                     columns.RelativeColumn(3.2f);
                     columns.ConstantColumn(38);
                     columns.ConstantColumn(31);
@@ -137,7 +139,7 @@ public sealed class QuotationPdfService : IQuotationPdfService
                     var background = shaded ? "#F7F9FA" : "#FFFFFF";
                     shaded = !shaded;
                     Body(table, item.LineNumber.ToString(), background, TextAlign.Center);
-                    Body(table, item.PartNumberSnapshot ?? item.ItemReferenceSnapshot ?? "", background);
+                    Body(table, Reference(item), background);
                     Body(table, Description(item, company.ShowAvailableStockOnPrintedQuotation), background);
                     Body(table, item.Quantity.ToString("0.####"), background, TextAlign.Right);
                     Body(table, item.UnitSnapshot, background, TextAlign.Center);
@@ -301,6 +303,15 @@ public sealed class QuotationPdfService : IQuotationPdfService
         if (!string.IsNullOrWhiteSpace(item.Notes)) details.Add(item.Notes);
         if (showStock && item.StockItemId is not null) details.Add($"Available stock at quotation date: {item.AvailableStockSnapshot:0.####}");
         return string.Join("\n", details);
+    }
+
+    private static string Reference(QuotationItem item)
+    {
+        var reference = item.ItemReferenceSnapshot?.Trim();
+        var partNumber = item.PartNumberSnapshot?.Trim();
+        if (string.IsNullOrWhiteSpace(reference)) return partNumber ?? "";
+        if (string.IsNullOrWhiteSpace(partNumber) || string.Equals(reference, partNumber, StringComparison.OrdinalIgnoreCase)) return reference;
+        return $"{reference}\nPart No: {partNumber}";
     }
 
     private static string Contact(CompanySettings company)

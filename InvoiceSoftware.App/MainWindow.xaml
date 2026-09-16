@@ -753,10 +753,10 @@
                                         </Button>
                                     </WrapPanel>
                                 </DockPanel>
-                                <CheckBox Content="PDF: show total price only (hide item prices)"
+                                <CheckBox Content="PDF: show item details and grand total only"
                                           IsChecked="{Binding CurrentQuotation.HideItemPricesOnPdf, UpdateSourceTrigger=PropertyChanged}"
                                           Click="QuotationPdfOption_Click" Margin="0,0,0,8"
-                                          ToolTip="The PDF hides line prices and the subtotal breakdown; only the grand total remains." />
+                                          ToolTip="Keep each visible item's reference, part number, description, quantity and unit. Hide unit prices, discounts, tax, line totals and the subtotal breakdown." />
                                 <DataGrid x:Name="QuotationItemsGrid" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedLine}"
                                           AutoGenerateColumns="False" CanUserAddRows="False" Height="310" HorizontalScrollBarVisibility="Auto"
                                           CellEditEnding="QuotationItemsGrid_CellEditEnding" IsReadOnly="False">
