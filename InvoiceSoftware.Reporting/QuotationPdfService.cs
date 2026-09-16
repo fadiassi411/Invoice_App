@@ -96,7 +96,8 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 }));
             });
 
-            column.Item().PaddingTop(14).Table(table =>
+            var visibleItems = quotation.Items.Where(x => !x.HideOnPdf).OrderBy(x => x.DisplayOrder).ToList();
+            if (visibleItems.Count > 0) column.Item().PaddingTop(14).Table(table =>
             {
                 table.ColumnsDefinition(columns =>
                 {
@@ -105,24 +106,31 @@ public sealed class QuotationPdfService : IQuotationPdfService
                     columns.RelativeColumn(3.2f);
                     columns.ConstantColumn(38);
                     columns.ConstantColumn(31);
-                    columns.ConstantColumn(55);
-                    columns.ConstantColumn(44);
-                    columns.ConstantColumn(39);
-                    columns.ConstantColumn(61);
+                    if (!quotation.HideItemPricesOnPdf)
+                    {
+                        columns.ConstantColumn(55);
+                        columns.ConstantColumn(44);
+                        columns.ConstantColumn(39);
+                        columns.ConstantColumn(61);
+                    }
                 });
                 table.Header(header =>
                 {
                     TableHeader(header, "No."); TableHeader(header, "Reference"); TableHeader(header, "Description");
-                    TableHeader(header, "Qty"); TableHeader(header, "Unit"); TableHeader(header, "Unit price");
-                    TableHeader(header, "Discount"); TableHeader(header, "Tax"); TableHeader(header, "Total");
+                    TableHeader(header, "Qty"); TableHeader(header, "Unit");
+                    if (!quotation.HideItemPricesOnPdf)
+                    {
+                        TableHeader(header, "Unit price"); TableHeader(header, "Discount");
+                        TableHeader(header, "Tax"); TableHeader(header, "Total");
+                    }
                 });
 
                 var shaded = false;
-                foreach (var item in quotation.Items.OrderBy(x => x.DisplayOrder))
+                foreach (var item in visibleItems)
                 {
                     if (item.ItemType == QuotationItemType.SectionHeader)
                     {
-                        table.Cell().ColumnSpan(9).Background(Navy).PaddingVertical(5).PaddingHorizontal(7)
+                        table.Cell().ColumnSpan(quotation.HideItemPricesOnPdf ? 5u : 9u).Background(Navy).PaddingVertical(5).PaddingHorizontal(7)
                             .Text(item.DescriptionSnapshot).Bold().FontColor(Colors.White);
                         continue;
                     }
@@ -133,10 +141,13 @@ public sealed class QuotationPdfService : IQuotationPdfService
                     Body(table, Description(item, company.ShowAvailableStockOnPrintedQuotation), background);
                     Body(table, item.Quantity.ToString("0.####"), background, TextAlign.Right);
                     Body(table, item.UnitSnapshot, background, TextAlign.Center);
-                    Body(table, item.UnitPrice.ToString("N2"), background, TextAlign.Right);
-                    Body(table, item.DiscountAmount.ToString("N2"), background, TextAlign.Right);
-                    Body(table, item.TaxAmount.ToString("N2"), background, TextAlign.Right);
-                    Body(table, item.LineTotal.ToString("N2"), background, TextAlign.Right);
+                    if (!quotation.HideItemPricesOnPdf)
+                    {
+                        Body(table, item.UnitPrice.ToString("N2"), background, TextAlign.Right);
+                        Body(table, item.DiscountAmount.ToString("N2"), background, TextAlign.Right);
+                        Body(table, item.TaxAmount.ToString("N2"), background, TextAlign.Right);
+                        Body(table, item.LineTotal.ToString("N2"), background, TextAlign.Right);
+                    }
                 }
             });
 
@@ -154,13 +165,16 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 });
                 row.ConstantItem(225).Background(Pale).BorderLeft(3).BorderColor(Teal).Padding(9).Column(totals =>
                 {
-                    Total(totals, "Subtotal", quotation.Subtotal, quotation.CurrencyCode);
-                    Total(totals, "Discount", -quotation.DiscountTotal, quotation.CurrencyCode);
-                    Total(totals, "Net amount", quotation.NetAmount, quotation.CurrencyCode);
-                    Total(totals, "Tax", quotation.TaxTotal, quotation.CurrencyCode);
-                    if (quotation.ShippingCharge != 0) Total(totals, "Shipping / delivery", quotation.ShippingCharge, quotation.CurrencyCode);
-                    if (quotation.AdditionalCharges != 0) Total(totals, "Additional charges", quotation.AdditionalCharges, quotation.CurrencyCode);
-                    if (quotation.RoundingAdjustment != 0) Total(totals, "Rounding", quotation.RoundingAdjustment, quotation.CurrencyCode);
+                    if (!quotation.HideItemPricesOnPdf)
+                    {
+                        Total(totals, "Subtotal", quotation.Subtotal, quotation.CurrencyCode);
+                        Total(totals, "Discount", -quotation.DiscountTotal, quotation.CurrencyCode);
+                        Total(totals, "Net amount", quotation.NetAmount, quotation.CurrencyCode);
+                        Total(totals, "Tax", quotation.TaxTotal, quotation.CurrencyCode);
+                        if (quotation.ShippingCharge != 0) Total(totals, "Shipping / delivery", quotation.ShippingCharge, quotation.CurrencyCode);
+                        if (quotation.AdditionalCharges != 0) Total(totals, "Additional charges", quotation.AdditionalCharges, quotation.CurrencyCode);
+                        if (quotation.RoundingAdjustment != 0) Total(totals, "Rounding", quotation.RoundingAdjustment, quotation.CurrencyCode);
+                    }
                     totals.Item().PaddingTop(5).LineHorizontal(1).LineColor(Teal);
                     totals.Item().PaddingTop(5).Row(total =>
                     {

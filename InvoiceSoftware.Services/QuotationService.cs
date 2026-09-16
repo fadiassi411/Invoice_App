@@ -143,6 +143,23 @@ public sealed class QuotationService(
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task DeleteAsync(int quotationId, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var quotation = await db.Quotations.SingleOrDefaultAsync(x => x.Id == quotationId, cancellationToken)
+            ?? throw new InvalidOperationException("Quotation was not found.");
+        if (quotation.ConvertedInvoiceId is not null ||
+            await db.Invoices.IgnoreQueryFilters().AnyAsync(x => x.SourceQuotationId == quotationId, cancellationToken))
+            throw new InvalidOperationException("This quotation is linked to an invoice and cannot be deleted.");
+        if (await db.Quotations.IgnoreQueryFilters().AnyAsync(x => x.ParentQuotationId == quotationId, cancellationToken))
+            throw new InvalidOperationException("Delete the later revisions of this quotation first.");
+
+        db.AuditLogs.Add(new AuditLog { Action = "Delete", EntityName = nameof(Quotation), EntityId = quotation.Id, Details = $"Permanently deleted {quotation.DisplayNumber}." });
+        db.Quotations.Remove(quotation);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task<Invoice> ConvertToInvoiceAsync(int quotationId, CancellationToken cancellationToken = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -282,6 +299,7 @@ public sealed class QuotationService(
             PaymentTerms = source.PaymentTerms, DeliveryTerms = source.DeliveryTerms, DeliveryPeriod = source.DeliveryPeriod, Warranty = source.Warranty,
             PublicNotes = source.PublicNotes, InternalNotes = source.InternalNotes, TermsAndConditions = source.TermsAndConditions,
             OverallDiscountType = source.OverallDiscountType, OverallDiscountValue = source.OverallDiscountValue,
+            HideItemPricesOnPdf = source.HideItemPricesOnPdf,
             ShippingCharge = source.ShippingCharge, AdditionalCharges = source.AdditionalCharges, RoundingAdjustment = source.RoundingAdjustment,
             Items = source.Items.OrderBy(x => x.DisplayOrder).Select(x => new QuotationItem
             {
@@ -290,7 +308,7 @@ public sealed class QuotationService(
                 DescriptionSnapshot = x.DescriptionSnapshot, UnitSnapshot = x.UnitSnapshot, BrandSnapshot = x.BrandSnapshot,
                 ManufacturerSnapshot = x.ManufacturerSnapshot, WarrantySnapshot = x.WarrantySnapshot, AvailableStockSnapshot = x.AvailableStockSnapshot,
                 Quantity = x.Quantity, UnitPrice = x.UnitPrice, DiscountType = x.DiscountType, DiscountPercentage = x.DiscountPercentage,
-                DiscountValue = x.DiscountValue, TaxPercentage = x.TaxPercentage, Notes = x.Notes
+                DiscountValue = x.DiscountValue, TaxPercentage = x.TaxPercentage, Notes = x.Notes, HideOnPdf = x.HideOnPdf
             }).ToList()
         };
     }

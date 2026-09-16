@@ -26,6 +26,7 @@ public interface IQuotationService
     Task<Quotation> CreateRevisionAsync(int quotationId, CancellationToken cancellationToken = default);
     Task ChangeStatusAsync(int quotationId, QuotationStatus status, string? notes = null, CancellationToken cancellationToken = default);
     Task ArchiveAsync(int quotationId, CancellationToken cancellationToken = default);
+    Task DeleteAsync(int quotationId, CancellationToken cancellationToken = default);
     Task<Invoice> ConvertToInvoiceAsync(int quotationId, CancellationToken cancellationToken = default);
     Task<QuotationStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default);
 }

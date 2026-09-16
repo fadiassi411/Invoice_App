@@ -59,6 +59,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
         DuplicateCommand = new RelayCommand<Quotation>(DuplicateAsync);
         CreateRevisionCommand = new RelayCommand<Quotation>(CreateRevisionAsync);
         ArchiveCommand = new RelayCommand<Quotation>(ArchiveAsync);
+        DeleteCommand = new RelayCommand<Quotation>(DeleteAsync);
         AddStockItemCommand = new RelayCommand(AddStockItemAsync);
         AddManualItemCommand = new RelayCommand(AddManualItemAsync);
         AddServiceCommand = new RelayCommand(AddServiceAsync);
@@ -96,6 +97,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     public ICommand DuplicateCommand { get; }
     public ICommand CreateRevisionCommand { get; }
     public ICommand ArchiveCommand { get; }
+    public ICommand DeleteCommand { get; }
     public ICommand AddStockItemCommand { get; }
     public ICommand AddManualItemCommand { get; }
     public ICommand AddServiceCommand { get; }
@@ -302,6 +304,26 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
         await _service.ArchiveAsync(quotation.Id);
         if (CurrentQuotation?.Id == quotation.Id) CurrentQuotation = null;
         await SearchAsync();
+    }
+
+    private async Task DeleteAsync(Quotation? quotation)
+    {
+        quotation ??= SelectedQuotation;
+        if (quotation is null) return;
+        if (MessageBox.Show($"Permanently delete {quotation.DisplayNumber} and its items and status history? This cannot be undone. Its number will not be reused.",
+                "Delete quotation", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            await _service.DeleteAsync(quotation.Id);
+            if (CurrentQuotation?.Id == quotation.Id) CurrentQuotation = null;
+            await SearchAsync();
+            StatusMessage = $"Deleted {quotation.DisplayNumber}.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            MessageBox.Show(ex.Message, "Quotation retained", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusMessage = ex.Message;
+        }
     }
 
     private async Task AddStockItemAsync()

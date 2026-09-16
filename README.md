@@ -1,8 +1,8 @@
 # Invoice Management Software
 
-## License activation (v1.2.1)
+## License activation (v1.2.1 and later)
 
-Invoice Maker v1.2.1 requires a signed, installation-specific `.invoicelicense` file. On first start, copy the displayed `INV-...` installation ID and send it to the supplier. The supplier creates the license with **MicroBrain License Manager v4.3.0** by selecting **Invoice App**. Use **Activate License** to import the returned file.
+Invoice Maker v1.2.1 and later requires a signed, installation-specific `.invoicelicense` file. On first start, copy the displayed `INV-...` installation ID and send it to the supplier. The supplier creates the license with **MicroBrain License Manager v4.3.0** by selecting **Invoice App**. Use **Activate License** to import the returned file.
 
 The application validates the ECDSA signature, Invoice App product/format, machine-derived installation ID, issue date, and optional expiry date before opening. The public verification key is embedded in the application; the private supplier key is never included. The installed license is stored separately from the SQLite database under `%LOCALAPPDATA%\InvoiceSoftware`, so database backup/restore does not transfer a license to another computer.
 
@@ -82,5 +82,9 @@ Migration `AddStoreInventoryManagement` creates the normalized inventory schema.
 ## Quotation Management
 
 The **Quotations** workspace creates searchable, revision-controlled quotations from stock items or manual service lines. Quotations use atomic `QUO-YYYY-000001` numbering, store customer/item snapshots, support line and overall discounts, inclusive/exclusive/exempt tax, validity/expiry, status history, duplication, CSV export, archiving, PDF preview/print/export, and transactional conversion of an accepted quotation into a draft invoice. Saving or revising a quotation never changes stock; inventory is affected only by the existing finalized-invoice workflow.
+
+To remove an erroneous quotation in v1.2.2 or later, select its row in **Quotations** and choose **Delete Permanently**. This removes only the selected revision, its items, and its status history; it cannot be undone and its number is not reused. Delete later revisions first. A quotation linked to an invoice cannot be deleted. Use **Archive** instead when you need to hide a quotation while retaining its history.
+
+In the quotation editor, enable **PDF: show total price only** to omit line prices and the subtotal breakdown from the customer-facing PDF while retaining the grand total. Tick **Hide in PDF** on an individual row to omit that row from the PDF. Hidden rows remain saved and still contribute to the quotation total; these settings carry forward when duplicating or revising a quotation.
 
 Migration `AddQuotationManagement` adds normalized quotation, quotation-item, and status-history tables; unique number/revision constraints; search indexes; quotation settings; product/customer extensions; and quotation-to-invoice links. Existing customer, product, invoice, receipt, inventory, and backup data is preserved. The automated suite covers calculations, numbering, snapshots, revisions, expiry, search, one-page and multi-page PDFs, backup payloads, migration upgrades, stock isolation, conversion totals, and duplicate-conversion prevention.

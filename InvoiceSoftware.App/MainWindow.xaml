@@ -753,6 +753,10 @@
                                         </Button>
                                     </WrapPanel>
                                 </DockPanel>
+                                <CheckBox Content="PDF: show total price only (hide item prices)"
+                                          IsChecked="{Binding CurrentQuotation.HideItemPricesOnPdf, UpdateSourceTrigger=PropertyChanged}"
+                                          Click="QuotationPdfOption_Click" Margin="0,0,0,8"
+                                          ToolTip="The PDF hides line prices and the subtotal breakdown; only the grand total remains." />
                                 <DataGrid x:Name="QuotationItemsGrid" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedLine}"
                                           AutoGenerateColumns="False" CanUserAddRows="False" Height="310" HorizontalScrollBarVisibility="Auto"
                                           CellEditEnding="QuotationItemsGrid_CellEditEnding" IsReadOnly="False">
@@ -786,6 +790,15 @@
                                         <DataGridTextColumn Header="Tax %" Binding="{Binding TaxPercentage, UpdateSourceTrigger=PropertyChanged}" Width="60" />
                                         <DataGridTextColumn Header="Tax" Binding="{Binding TaxAmount, StringFormat=N2}" IsReadOnly="True" Width="68" />
                                         <DataGridTextColumn Header="Line Total" Binding="{Binding LineTotal, StringFormat=N2}" IsReadOnly="True" Width="85" />
+                                        <DataGridTemplateColumn Header="Hide in PDF" Width="85">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding HideOnPdf, UpdateSourceTrigger=PropertyChanged}"
+                                                              Click="QuotationPdfOption_Click" HorizontalAlignment="Center"
+                                                              ToolTip="Omit this row from the PDF; it still counts toward the quotation total." />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                         <DataGridTextColumn Header="Notes" Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" Width="170" />
                                         <DataGridTemplateColumn Header="Actions" Width="118">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -922,6 +935,7 @@
                                     <Button Content="Create Revision" Command="{Binding CreateRevisionCommand}" CommandParameter="{Binding SelectedQuotation}" />
                                     <Button Content="Convert to Invoice" Command="{Binding ConvertToInvoiceCommand}" CommandParameter="{Binding SelectedQuotation}" Background="#1E7480" />
                                     <Button Content="Archive" Command="{Binding ArchiveCommand}" CommandParameter="{Binding SelectedQuotation}" Background="#B91C1C" />
+                                    <Button Content="Delete Permanently" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedQuotation}" Background="#8B1A1A" />
                                 </WrapPanel>
                                 <TextBlock Text="{Binding StatusMessage}" Foreground="#17365D" Margin="0,6,0,0" />
                             </StackPanel>

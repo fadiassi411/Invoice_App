@@ -53,6 +53,7 @@ public sealed class Quotation : BaseEntity
     public decimal RoundingAdjustment { get; set; }
     public decimal GrandTotal { get; set; }
     public string? AmountInWords { get; set; }
+    public bool HideItemPricesOnPdf { get; set; }
 
     public int? ConvertedInvoiceId { get; set; }
     public Invoice? ConvertedInvoice { get; set; }
@@ -95,6 +96,7 @@ public sealed class QuotationItem : BaseEntity
     public decimal TaxAmount { get; set; }
     public decimal LineTotal { get; set; }
     public string? Notes { get; set; }
+    public bool HideOnPdf { get; set; }
 }
 
 public sealed class QuotationStatusHistory : BaseEntity

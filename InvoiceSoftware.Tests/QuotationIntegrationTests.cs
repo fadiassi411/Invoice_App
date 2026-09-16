@@ -91,6 +91,83 @@ public sealed class QuotationIntegrationTests
     }
 
     [Fact]
+    public async Task Delete_removes_only_selected_revision_and_preserves_number_sequence()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var original = await fixture.Service.CreateDraftAsync(1);
+        original.Items.Add(new QuotationItem { DescriptionSnapshot = "Test item", Quantity = 1, UnitPrice = 10 });
+        await fixture.Service.SaveAsync(original);
+        var revision = await fixture.Service.CreateRevisionAsync(original.Id);
+
+        await fixture.Service.DeleteAsync(revision.Id);
+        fixture.Db.ChangeTracker.Clear();
+
+        Assert.Null(await fixture.Service.GetAsync(revision.Id));
+        Assert.NotNull(await fixture.Service.GetAsync(original.Id));
+        Assert.Empty(await fixture.Db.QuotationItems.Where(x => x.QuotationId == revision.Id).ToListAsync());
+        Assert.Empty(await fixture.Db.QuotationStatusHistory.Where(x => x.QuotationId == revision.Id).ToListAsync());
+        Assert.Contains(await fixture.Db.AuditLogs.ToListAsync(), x => x.Action == "Delete" && x.EntityId == revision.Id);
+        var next = await fixture.Service.CreateDraftAsync(1);
+        Assert.NotEqual(original.QuotationNumber, next.QuotationNumber);
+    }
+
+    [Fact]
+    public async Task Delete_blocks_original_while_later_revision_exists()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var original = await fixture.Service.CreateDraftAsync(1);
+        original.Items.Add(new QuotationItem { DescriptionSnapshot = "Test item", Quantity = 1, UnitPrice = 10 });
+        await fixture.Service.SaveAsync(original);
+        var revision = await fixture.Service.CreateRevisionAsync(original.Id);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.DeleteAsync(original.Id));
+        Assert.Contains("later revisions", error.Message);
+        Assert.NotNull(await fixture.Service.GetAsync(original.Id));
+        Assert.NotNull(await fixture.Service.GetAsync(revision.Id));
+    }
+
+    [Fact]
+    public async Task Delete_blocks_quotation_linked_to_invoice()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var quotation = await fixture.Service.CreateDraftAsync(1);
+        quotation.Items.Add(new QuotationItem { DescriptionSnapshot = "Test item", Quantity = 1, UnitPrice = 10 });
+        await fixture.Service.SaveAsync(quotation);
+        await fixture.Service.ChangeStatusAsync(quotation.Id, QuotationStatus.Sent);
+        await fixture.Service.ChangeStatusAsync(quotation.Id, QuotationStatus.Accepted);
+        var invoice = await fixture.Service.ConvertToInvoiceAsync(quotation.Id);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.DeleteAsync(quotation.Id));
+        Assert.Contains("linked to an invoice", error.Message);
+        Assert.NotNull(await fixture.Service.GetAsync(quotation.Id));
+        Assert.NotNull(await fixture.Db.Invoices.FindAsync(invoice.Id));
+    }
+
+    [Fact]
+    public async Task Pdf_visibility_options_survive_save_and_revision_without_changing_totals()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var quotation = await fixture.Service.CreateDraftAsync(1);
+        quotation.HideItemPricesOnPdf = true;
+        quotation.Items.Add(new QuotationItem { DescriptionSnapshot = "Visible item", Quantity = 1, UnitPrice = 100 });
+        quotation.Items.Add(new QuotationItem { DescriptionSnapshot = "Hidden item", Quantity = 1, UnitPrice = 50, HideOnPdf = true });
+        await fixture.Service.SaveAsync(quotation);
+        var originalTotal = quotation.GrandTotal;
+
+        fixture.Db.ChangeTracker.Clear();
+        var reopened = await fixture.Service.GetAsync(quotation.Id);
+        Assert.NotNull(reopened);
+        Assert.True(reopened!.HideItemPricesOnPdf);
+        Assert.True(reopened.Items.Single(x => x.DescriptionSnapshot == "Hidden item").HideOnPdf);
+        Assert.Equal(originalTotal, reopened.GrandTotal);
+
+        var revision = await fixture.Service.CreateRevisionAsync(quotation.Id);
+        Assert.True(revision.HideItemPricesOnPdf);
+        Assert.True(revision.Items.Single(x => x.DescriptionSnapshot == "Hidden item").HideOnPdf);
+        Assert.Equal(originalTotal, revision.GrandTotal);
+    }
+
+    [Fact]
     public async Task Reopened_stock_quotation_preserves_product_link_when_saved_and_converted()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -178,8 +255,16 @@ public sealed class QuotationIntegrationTests
             var service = new QuotationPdfService(); var calculator = new QuotationCalculator(); var company = new CompanySettings { CompanyName = "Test Company", Currency = "USD" };
             var onePage = QuoteForPdf(2); calculator.Calculate(onePage); var onePath = Path.Combine(folder, "one.pdf"); service.ExportQuotation(onePage, company, onePath);
             var manyPages = QuoteForPdf(75); calculator.Calculate(manyPages); var manyPath = Path.Combine(folder, "many.pdf"); service.ExportQuotation(manyPages, company, manyPath);
+            var privatePrices = QuoteForPdf(2);
+            privatePrices.HideItemPricesOnPdf = true;
+            privatePrices.Items[0].DescriptionSnapshot = "VISIBLE_ITEM_MARKER";
+            privatePrices.Items[1].DescriptionSnapshot = "HIDDEN_ITEM_MARKER";
+            privatePrices.Items[1].HideOnPdf = true;
+            calculator.Calculate(privatePrices);
+            var privatePath = Path.Combine(folder, "private.pdf"); service.ExportQuotation(privatePrices, company, privatePath);
             Assert.True(new FileInfo(onePath).Length > 1_000);
             Assert.True(new FileInfo(manyPath).Length > new FileInfo(onePath).Length);
+            Assert.True(new FileInfo(privatePath).Length > 1_000);
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(await File.ReadAllBytesAsync(onePath), 0, 4));
             var qaFolder = Environment.GetEnvironmentVariable("QUOTATION_QA_FOLDER");
             if (!string.IsNullOrWhiteSpace(qaFolder))
@@ -187,6 +272,7 @@ public sealed class QuotationIntegrationTests
                 Directory.CreateDirectory(qaFolder);
                 File.Copy(onePath, Path.Combine(qaFolder, "quotation-one-page.pdf"), true);
                 File.Copy(manyPath, Path.Combine(qaFolder, "quotation-multi-page.pdf"), true);
+                File.Copy(privatePath, Path.Combine(qaFolder, "quotation-private-prices.pdf"), true);
             }
         }
         finally { Directory.Delete(folder, true); }

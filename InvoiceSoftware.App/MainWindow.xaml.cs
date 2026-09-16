@@ -31,6 +31,12 @@ public partial class MainWindow : Window
             viewModel.Quotations.MarkUnsaved();
     }
 
+    private void QuotationPdfOption_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.Quotations.MarkUnsaved();
+    }
+
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
         if (DataContext is not MainViewModel { Quotations.HasUnsavedChanges: true }) return;
