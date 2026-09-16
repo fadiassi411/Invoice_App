@@ -756,7 +756,7 @@
                                 <CheckBox Content="PDF: show item details and grand total only"
                                           IsChecked="{Binding CurrentQuotation.HideItemPricesOnPdf, UpdateSourceTrigger=PropertyChanged}"
                                           Click="QuotationPdfOption_Click" Margin="0,0,0,8"
-                                          ToolTip="Keep each visible item's reference, part number, description, quantity and unit. Hide unit prices, discounts, tax, line totals and the subtotal breakdown." />
+                                          ToolTip="Keep each printed item's reference, part number, description, quantity and unit. Hide unit prices, discounts, tax, line totals and the subtotal breakdown." />
                                 <DataGrid x:Name="QuotationItemsGrid" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedLine}"
                                           AutoGenerateColumns="False" CanUserAddRows="False" Height="310" HorizontalScrollBarVisibility="Auto"
                                           CellEditEnding="QuotationItemsGrid_CellEditEnding" IsReadOnly="False">
@@ -795,7 +795,7 @@
                                                 <DataTemplate>
                                                     <CheckBox IsChecked="{Binding HideOnPdf, UpdateSourceTrigger=PropertyChanged}"
                                                               Click="QuotationPdfOption_Click" HorizontalAlignment="Center"
-                                                              ToolTip="Omit this row from the PDF; it still counts toward the quotation total." />
+                                                              ToolTip="Omit only this row from the PDF. Its amount remains in the grand total." />
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>

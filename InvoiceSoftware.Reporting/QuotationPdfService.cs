@@ -98,8 +98,8 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 }));
             });
 
-            var visibleItems = quotation.Items.Where(x => !x.HideOnPdf).OrderBy(x => x.DisplayOrder).ToList();
-            if (visibleItems.Count > 0) column.Item().PaddingTop(14).Table(table =>
+            var items = quotation.Items.Where(x => !x.HideOnPdf).OrderBy(x => x.DisplayOrder).ToList();
+            if (items.Count > 0) column.Item().PaddingTop(14).Table(table =>
             {
                 table.ColumnsDefinition(columns =>
                 {
@@ -128,7 +128,8 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 });
 
                 var shaded = false;
-                foreach (var item in visibleItems)
+                var printedLineNumber = 0;
+                foreach (var item in items)
                 {
                     if (item.ItemType == QuotationItemType.SectionHeader)
                     {
@@ -138,7 +139,7 @@ public sealed class QuotationPdfService : IQuotationPdfService
                     }
                     var background = shaded ? "#F7F9FA" : "#FFFFFF";
                     shaded = !shaded;
-                    Body(table, item.LineNumber.ToString(), background, TextAlign.Center);
+                    Body(table, (++printedLineNumber).ToString(), background, TextAlign.Center);
                     Body(table, Reference(item), background);
                     Body(table, Description(item, company.ShowAvailableStockOnPrintedQuotation), background);
                     Body(table, item.Quantity.ToString("0.####"), background, TextAlign.Right);
@@ -187,8 +188,8 @@ public sealed class QuotationPdfService : IQuotationPdfService
             });
 
             column.Item().PaddingTop(16).Element(x => CommercialTerms(x, quotation));
-            column.Item().PaddingTop(15).Text(company.QuotationFooter).Italic().FontColor("#4C5A67");
-            column.Item().PaddingTop(18).Row(row =>
+            column.Item().PaddingTop(10).Text(company.QuotationFooter).Italic().FontColor("#4C5A67");
+            column.Item().PaddingTop(10).Row(row =>
             {
                 row.RelativeItem().Element(x => SignatureBox(x, "PREPARED BY", quotation.Salesperson));
                 row.ConstantItem(12);
@@ -196,7 +197,7 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 row.ConstantItem(12);
                 row.RelativeItem().Element(x => SignatureBox(x, "CUSTOMER ACCEPTANCE", quotation.CustomerNameSnapshot));
             });
-            column.Item().PaddingTop(9).AlignCenter().Text("This document is a quotation and is not a tax invoice.").Bold().FontColor(Navy);
+            column.Item().PaddingTop(5).AlignCenter().Text("This document is a quotation and is not a tax invoice.").Bold().FontColor(Navy);
         });
     }
 

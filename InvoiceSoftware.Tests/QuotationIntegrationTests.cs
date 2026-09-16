@@ -183,6 +183,24 @@ public sealed class QuotationIntegrationTests
     }
 
     [Fact]
+    public async Task Arabic_quotation_text_round_trips_through_the_database()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var quotation = await fixture.Service.CreateDraftAsync(1);
+        quotation.ProjectName = "مشروع تجريبي";
+        quotation.PublicNotes = "ملاحظات باللغة العربية";
+        quotation.Items.Add(new QuotationItem { DescriptionSnapshot = "مستشعر درجة الحرارة", Quantity = 2, UnitPrice = 25 });
+        await fixture.Service.SaveAsync(quotation);
+
+        fixture.Db.ChangeTracker.Clear();
+        var reopened = await fixture.Service.GetAsync(quotation.Id);
+        Assert.NotNull(reopened);
+        Assert.Equal("مشروع تجريبي", reopened!.ProjectName);
+        Assert.Equal("ملاحظات باللغة العربية", reopened.PublicNotes);
+        Assert.Equal("مستشعر درجة الحرارة", reopened.Items.Single().DescriptionSnapshot);
+    }
+
+    [Fact]
     public async Task Reopened_stock_quotation_preserves_product_link_when_saved_and_converted()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -270,18 +288,33 @@ public sealed class QuotationIntegrationTests
             var service = new QuotationPdfService(); var calculator = new QuotationCalculator(); var company = new CompanySettings { CompanyName = "Test Company", Currency = "USD" };
             var onePage = QuoteForPdf(2); calculator.Calculate(onePage); var onePath = Path.Combine(folder, "one.pdf"); service.ExportQuotation(onePage, company, onePath);
             var manyPages = QuoteForPdf(75); calculator.Calculate(manyPages); var manyPath = Path.Combine(folder, "many.pdf"); service.ExportQuotation(manyPages, company, manyPath);
-            var privatePrices = QuoteForPdf(2);
+            var privatePrices = QuoteForPdf(10);
             privatePrices.HideItemPricesOnPdf = true;
             privatePrices.Items[0].DescriptionSnapshot = "VISIBLE_ITEM_MARKER";
             privatePrices.Items[0].PartNumberSnapshot = "PARTNO-001";
-            privatePrices.Items[1].DescriptionSnapshot = "HIDDEN_ITEM_MARKER";
-            privatePrices.Items[1].HideOnPdf = true;
+            privatePrices.CustomerNameSnapshot = "عميل تجريبي";
+            privatePrices.PublicNotes = "ملاحظات باللغة العربية";
+            privatePrices.Items[1].DescriptionSnapshot = "مستشعر درجة الحرارة";
+            privatePrices.Items[1].ItemReferenceSnapshot = "REF-AR-2";
+            privatePrices.Items[4].DescriptionSnapshot = "HIDDEN_ITEM_MARKER";
             calculator.Calculate(privatePrices);
+            var totalWithAllRows = privatePrices.GrandTotal;
+            privatePrices.Items[4].HideOnPdf = true;
+            calculator.Calculate(privatePrices);
+            Assert.Equal(totalWithAllRows, privatePrices.GrandTotal);
             var privatePath = Path.Combine(folder, "private.pdf"); service.ExportQuotation(privatePrices, company, privatePath);
+            var hiddenRowWithPrices = QuoteForPdf(3);
+            calculator.Calculate(hiddenRowWithPrices);
+            var totalBeforeHiding = hiddenRowWithPrices.GrandTotal;
+            hiddenRowWithPrices.Items[1].HideOnPdf = true;
+            calculator.Calculate(hiddenRowWithPrices);
+            Assert.Equal(totalBeforeHiding, hiddenRowWithPrices.GrandTotal);
+            var hiddenRowPath = Path.Combine(folder, "hidden-row.pdf"); service.ExportQuotation(hiddenRowWithPrices, company, hiddenRowPath);
             Assert.Throws<InvalidOperationException>(() => service.ExportQuotation(new Quotation { GrandTotal = 100 }, company, Path.Combine(folder, "empty.pdf")));
             Assert.True(new FileInfo(onePath).Length > 1_000);
             Assert.True(new FileInfo(manyPath).Length > new FileInfo(onePath).Length);
             Assert.True(new FileInfo(privatePath).Length > 1_000);
+            Assert.True(new FileInfo(hiddenRowPath).Length > 1_000);
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(await File.ReadAllBytesAsync(onePath), 0, 4));
             var qaFolder = Environment.GetEnvironmentVariable("QUOTATION_QA_FOLDER");
             if (!string.IsNullOrWhiteSpace(qaFolder))
@@ -290,6 +323,7 @@ public sealed class QuotationIntegrationTests
                 File.Copy(onePath, Path.Combine(qaFolder, "quotation-one-page.pdf"), true);
                 File.Copy(manyPath, Path.Combine(qaFolder, "quotation-multi-page.pdf"), true);
                 File.Copy(privatePath, Path.Combine(qaFolder, "quotation-private-prices.pdf"), true);
+                File.Copy(hiddenRowPath, Path.Combine(qaFolder, "quotation-hidden-row-with-prices.pdf"), true);
             }
         }
         finally { Directory.Delete(folder, true); }
