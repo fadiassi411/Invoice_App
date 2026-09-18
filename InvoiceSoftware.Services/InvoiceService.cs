@@ -49,6 +49,7 @@ public sealed class InvoiceService(InvoiceDbContext db, IReferenceNumberService 
         {
             if (item.Quantity <= 0) throw new InvalidOperationException("Invoice quantity must be greater than zero.");
             if (item.UnitPrice < 0) throw new InvalidOperationException("Selling price cannot be negative.");
+            if (item.CostPriceSnapshot < 0) throw new InvalidOperationException("Internal unit cost cannot be negative.");
         }
         calculator.Calculate(invoice);
 

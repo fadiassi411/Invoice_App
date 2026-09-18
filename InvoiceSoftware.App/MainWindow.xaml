@@ -562,13 +562,14 @@
                                     </StackPanel>
                                     <TextBlock Text="Invoice items" FontSize="18" FontWeight="SemiBold" />
                                 </DockPanel>
-                                <DataGrid ItemsSource="{Binding InvoiceItems}">
+                                <DataGrid ItemsSource="{Binding InvoiceItems}" AutoGenerateColumns="False" CellEditEnding="InvoiceItemsGrid_CellEditEnding">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="#" Binding="{Binding SortOrder}" Width="45" />
                                         <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" />
                                         <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="70" />
                                         <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="70" />
                                         <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice}" Width="90" />
+                                        <DataGridTextColumn Header="Unit cost (internal)" Binding="{Binding CostPriceSnapshot, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="135" />
                                         <DataGridTextColumn Header="Disc %" Binding="{Binding DiscountPercentage}" Width="80" />
                                         <DataGridTextColumn Header="Tax %" Binding="{Binding TaxPercentage}" Width="80" />
                                         <DataGridTemplateColumn Header="Action" Width="90">
@@ -580,6 +581,16 @@
                                         </DataGridTemplateColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
+                                <Border Background="#F0F7FC" BorderBrush="#C8DFEA" BorderThickness="1" CornerRadius="7" Padding="12" Margin="0,12,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Internal profit estimate — not printed" FontWeight="SemiBold" Foreground="#17365D" />
+                                        <TextBlock Text="{Binding InvoiceProfitEstimate.NetSales, StringFormat=Net sales before tax: {0:N2}}" />
+                                        <TextBlock Text="{Binding InvoiceProfitEstimate.KnownCost, StringFormat=Known item cost: {0:N2}}" />
+                                        <TextBlock Text="{Binding InvoiceProfitEstimate.ProfitDisplay, StringFormat=Estimated gross profit: {0}}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding InvoiceProfitEstimate.MarginDisplay, StringFormat=Margin: {0}}" />
+                                        <TextBlock Text="{Binding InvoiceProfitEstimate.Warning}" Foreground="#9A5600" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -727,7 +738,7 @@
                                     <StackPanel Grid.Column="3">
                                         <TextBlock Text="Currency" /><TextBox Text="{Binding CurrentQuotation.CurrencyCode, UpdateSourceTrigger=PropertyChanged}" />
                                         <TextBlock Text="Exchange rate" /><TextBox Text="{Binding CurrentQuotation.ExchangeRate, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Text="Tax mode" /><ComboBox ItemsSource="{Binding TaxModes}" SelectedItem="{Binding CurrentQuotation.TaxMode}" />
+                                        <TextBlock Text="Tax mode" /><ComboBox ItemsSource="{Binding TaxModes}" SelectedItem="{Binding CurrentQuotation.TaxMode}" SelectionChanged="QuotationTaxMode_SelectionChanged" />
                                         <TextBlock Text="Contact person" /><TextBox Text="{Binding CurrentQuotation.ContactPersonSnapshot, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                 </Grid>
@@ -778,6 +789,7 @@
                                         <DataGridTextColumn Header="Unit" Binding="{Binding UnitSnapshot, UpdateSourceTrigger=PropertyChanged}" Width="55" />
                                         <DataGridTextColumn Header="Available" Binding="{Binding AvailableStockSnapshot, StringFormat={}{0:0.####}}" IsReadOnly="True" Width="75" />
                                         <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="82" />
+                                        <DataGridTextColumn Header="Unit cost (internal)" Binding="{Binding CostPriceSnapshot, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="135" />
                                         <DataGridTemplateColumn Header="Disc. Type" Width="110">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
@@ -847,7 +859,7 @@
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="1" Style="{StaticResource Card}">
-                                <StackPanel>
+                                <StackPanel LostKeyboardFocus="QuotationTotals_LostKeyboardFocus">
                                     <TextBlock Text="Totals" FontSize="17" FontWeight="SemiBold" />
                                     <TextBlock Text="Overall discount type"/><ComboBox ItemsSource="{Binding DiscountTypes}" SelectedItem="{Binding CurrentQuotation.OverallDiscountType}"/>
                                     <TextBlock Text="Overall discount value"/><TextBox Text="{Binding CurrentQuotation.OverallDiscountValue, UpdateSourceTrigger=PropertyChanged}"/>
@@ -860,6 +872,16 @@
                                     <TextBlock Text="{Binding CurrentQuotation.NetAmount, StringFormat=Net: {0:N2}}"/>
                                     <TextBlock Text="{Binding CurrentQuotation.TaxTotal, StringFormat=Tax: {0:N2}}"/>
                                     <TextBlock Text="{Binding CurrentQuotation.GrandTotal, StringFormat=Grand Total: {0:N2}}" FontSize="18" FontWeight="Bold" Foreground="#17365D" Margin="0,6,0,0"/>
+                                    <Border Background="#F0F7FC" BorderBrush="#C8DFEA" BorderThickness="1" CornerRadius="7" Padding="10" Margin="0,12,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="Internal profit estimate — not printed" FontWeight="SemiBold" Foreground="#17365D" />
+                                            <TextBlock Text="{Binding InternalProfit.NetSales, StringFormat=Net sales before tax: {0:N2}}" />
+                                            <TextBlock Text="{Binding InternalProfit.KnownCost, StringFormat=Known item cost: {0:N2}}" />
+                                            <TextBlock Text="{Binding InternalProfit.ProfitDisplay, StringFormat=Estimated gross profit: {0}}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding InternalProfit.MarginDisplay, StringFormat=Margin: {0}}" />
+                                            <TextBlock Text="{Binding InternalProfit.Warning}" Foreground="#9A5600" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </Border>
                         </Grid>

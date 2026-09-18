@@ -64,6 +64,13 @@ public sealed class QuotationService(
             previousStatus = persisted.Status;
             EnsureEditable(persisted.Status);
             var retainedIds = quotation.Items.Where(x => x.Id != 0).Select(x => x.Id).ToList();
+            // ExecuteDelete bypasses the change tracker. A quotation opened for editing can
+            // still have removed children tracked as Deleted; detach only those children so
+            // SaveChanges does not attempt to delete the same rows a second time.
+            foreach (var entry in db.ChangeTracker.Entries<QuotationItem>()
+                         .Where(x => x.Entity.QuotationId == quotation.Id && x.Entity.Id != 0 && !retainedIds.Contains(x.Entity.Id))
+                         .ToList())
+                entry.State = EntityState.Detached;
             await db.QuotationItems.Where(x => x.QuotationId == quotation.Id && !retainedIds.Contains(x.Id)).ExecuteDeleteAsync(cancellationToken);
             db.Quotations.Update(quotation);
             if (previousStatus != quotation.Status)
@@ -209,13 +216,15 @@ public sealed class QuotationService(
                 Quantity = x.Quantity,
                 Unit = x.UnitSnapshot,
                 UnitPrice = x.UnitPrice,
+                CostPriceSnapshot = x.CostPriceSnapshot ?? 0m,
                 DiscountPercentage = x.GrossAmount == 0 ? 0 : x.DiscountAmount / x.GrossAmount * 100m,
                 TaxPercentage = x.TaxPercentage
             }).ToList()
         };
         var productIds = invoice.Items.Where(x => x.ProductId is not null).Select(x => x.ProductId!.Value).Distinct().ToList();
         var costs = await db.Products.IgnoreQueryFilters().Where(x => productIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.CostPrice, cancellationToken);
-        foreach (var item in invoice.Items.Where(x => x.ProductId is not null)) item.CostPriceSnapshot = costs.GetValueOrDefault(item.ProductId!.Value);
+        foreach (var item in invoice.Items.Where(x => x.ProductId is not null && x.CostPriceSnapshot == 0m))
+            item.CostPriceSnapshot = costs.GetValueOrDefault(item.ProductId!.Value);
         invoiceCalculator.Calculate(invoice);
         if (invoice.GrandTotal != quotation.GrandTotal)
         {
@@ -263,6 +272,7 @@ public sealed class QuotationService(
             item.value.DisplayOrder = item.index + 1;
             item.value.LineNumber = item.index + 1;
             if (string.IsNullOrWhiteSpace(item.value.DescriptionSnapshot)) throw new InvalidOperationException($"Line {item.value.LineNumber}: description is required.");
+            if (item.value.CostPriceSnapshot is < 0m) throw new InvalidOperationException($"Line {item.value.LineNumber}: internal cost cannot be negative.");
             if (item.value.StockItemId is null) continue;
             if (!products.TryGetValue(item.value.StockItemId.Value, out var product)) throw new InvalidOperationException($"Line {item.value.LineNumber}: stock item was not found.");
             if (!settings.AllowQuotationPriceOverride && item.value.UnitPrice != product.SellingPrice) throw new InvalidOperationException($"Line {item.value.LineNumber}: price override is disabled.");
@@ -277,6 +287,8 @@ public sealed class QuotationService(
             item.value.ManufacturerSnapshot ??= product.Manufacturer;
             item.value.WarrantySnapshot ??= product.Warranty;
             item.value.AvailableStockSnapshot = product.CurrentQuantity;
+            if (item.value.Id == 0 && item.value.CostPriceSnapshot is null && product.CostPrice > 0)
+                item.value.CostPriceSnapshot = product.CostPrice;
         }
     }
 
@@ -307,7 +319,8 @@ public sealed class QuotationService(
                 ItemReferenceSnapshot = x.ItemReferenceSnapshot, PartNumberSnapshot = x.PartNumberSnapshot, BarcodeSnapshot = x.BarcodeSnapshot,
                 DescriptionSnapshot = x.DescriptionSnapshot, UnitSnapshot = x.UnitSnapshot, BrandSnapshot = x.BrandSnapshot,
                 ManufacturerSnapshot = x.ManufacturerSnapshot, WarrantySnapshot = x.WarrantySnapshot, AvailableStockSnapshot = x.AvailableStockSnapshot,
-                Quantity = x.Quantity, UnitPrice = x.UnitPrice, DiscountType = x.DiscountType, DiscountPercentage = x.DiscountPercentage,
+                Quantity = x.Quantity, UnitPrice = x.UnitPrice, CostPriceSnapshot = x.CostPriceSnapshot,
+                DiscountType = x.DiscountType, DiscountPercentage = x.DiscountPercentage,
                 DiscountValue = x.DiscountValue, TaxPercentage = x.TaxPercentage, Notes = x.Notes, HideOnPdf = x.HideOnPdf
             }).ToList()
         };

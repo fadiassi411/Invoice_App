@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Text;
 using InvoiceSoftware.App;
 using InvoiceSoftware.Core.Models;
+using InvoiceSoftware.Core.Services;
 using InvoiceSoftware.Data;
 using InvoiceSoftware.Licensing;
 using InvoiceSoftware.Reporting;
@@ -35,6 +36,7 @@ public sealed class MainViewModel : ObservableObject
     private Customer? _selectedCustomer;
     private Product? _selectedProduct;
     private Invoice? _selectedInvoice;
+    private ProfitEstimate _invoiceProfitEstimate = ProfitEstimate.Empty;
     private DashboardSnapshot? _snapshot;
     private Product? _inventoryProduct;
     private Category? _selectedCategoryFilter;
@@ -233,10 +235,32 @@ public sealed class MainViewModel : ObservableObject
             {
                 InvoiceItems.Clear();
                 if (value is not null) foreach (var item in value.Items.OrderBy(x => x.SortOrder)) InvoiceItems.Add(item);
+                RecalculateInvoiceProfit();
             }
         }
     }
     public DashboardSnapshot? Snapshot { get => _snapshot; set => SetProperty(ref _snapshot, value); }
+    public ProfitEstimate InvoiceProfitEstimate { get => _invoiceProfitEstimate; private set => SetProperty(ref _invoiceProfitEstimate, value); }
+
+    public void RecalculateInvoiceProfit()
+    {
+        if (SelectedInvoice is null || InvoiceItems.Count == 0)
+        {
+            InvoiceProfitEstimate = ProfitEstimate.Empty;
+            return;
+        }
+
+        try
+        {
+            SelectedInvoice.Items = InvoiceItems.ToList();
+            new InvoiceCalculator().Calculate(SelectedInvoice);
+            InvoiceProfitEstimate = ProfitEstimateCalculator.ForInvoice(SelectedInvoice);
+        }
+        catch (InvalidOperationException)
+        {
+            InvoiceProfitEstimate = ProfitEstimate.Empty;
+        }
+    }
     public Product? InventoryProduct
     {
         get => _inventoryProduct;
@@ -454,7 +478,9 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex) { StatusMessage = ex.Message; }
     }
 
-    private async Task AddInvoiceRowAsync()
+    private Task AddInvoiceRowAsync() => AddInvoiceRowAsync(null);
+
+    private async Task AddInvoiceRowAsync(Product? product)
     {
         if (SelectedInvoice is null)
         {
@@ -462,7 +488,6 @@ public sealed class MainViewModel : ObservableObject
             if (SelectedInvoice is null) return;
         }
 
-        var product = SelectedProduct ?? Products.FirstOrDefault();
         var item = new InvoiceItem
         {
             SortOrder = InvoiceItems.Count + 1,
@@ -477,6 +502,7 @@ public sealed class MainViewModel : ObservableObject
         };
         SelectedInvoice.Items.Add(item);
         InvoiceItems.Add(item);
+        RecalculateInvoiceProfit();
         StatusMessage = "Invoice row added.";
     }
 
@@ -485,7 +511,7 @@ public sealed class MainViewModel : ObservableObject
         var dialog = new ProductSelectionDialog(Products.Where(x => x.IsActive).ToList()) { Owner = Application.Current.MainWindow };
         if (dialog.ShowDialog() != true || dialog.SelectedProduct is null) return;
         SelectedProduct = dialog.SelectedProduct;
-        await AddInvoiceRowAsync();
+        await AddInvoiceRowAsync(SelectedProduct);
     }
 
     private Task RemoveInvoiceRowAsync(InvoiceItem? item)
@@ -493,6 +519,7 @@ public sealed class MainViewModel : ObservableObject
         if (SelectedInvoice is null || item is null) return Task.CompletedTask;
         SelectedInvoice.Items.Remove(item);
         InvoiceItems.Remove(item);
+        RecalculateInvoiceProfit();
         StatusMessage = "Invoice row removed.";
         return Task.CompletedTask;
     }

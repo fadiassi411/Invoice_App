@@ -31,6 +31,37 @@ public partial class MainWindow : Window
             viewModel.Quotations.MarkUnsaved();
     }
 
+    private void InvoiceItemsGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (DataContext is MainViewModel viewModel)
+                viewModel.RecalculateInvoiceProfit();
+        });
+    }
+
+    private void QuotationTotals_LostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (DataContext is MainViewModel viewModel)
+                viewModel.Quotations.NotifyEditorChanged();
+        });
+    }
+
+    private void QuotationTaxMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var changedByUser = sender is ComboBox { IsKeyboardFocusWithin: true };
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (DataContext is MainViewModel viewModel && viewModel.Quotations.CurrentQuotation is not null)
+            {
+                if (changedByUser) viewModel.Quotations.NotifyEditorChanged();
+                else viewModel.Quotations.Recalculate();
+            }
+        });
+    }
+
     private void QuotationPdfOption_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)

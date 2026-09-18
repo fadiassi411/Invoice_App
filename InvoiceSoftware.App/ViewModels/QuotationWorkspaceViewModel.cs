@@ -36,6 +36,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     private bool _includeArchived;
     private string _stockWarning = "";
     private bool _hasUnsavedChanges;
+    private ProfitEstimate _profitEstimate = ProfitEstimate.Empty;
 
     public QuotationWorkspaceViewModel(IQuotationService service, ILookupService lookup, IQuotationPdfService pdf, QuotationCalculator calculator)
     {
@@ -127,6 +128,8 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
             if (value is not null) foreach (var item in value.Items.OrderBy(x => x.DisplayOrder)) Items.Add(item);
             SelectedCustomer = value is null ? null : Customers.FirstOrDefault(x => x.Id == value.CustomerId);
             Raise(nameof(CanEditCurrent));
+            if (Items.Count > 0) Recalculate();
+            else InternalProfit = ProfitEstimate.Empty;
         }
     }
     public Quotation? SelectedQuotation { get => _selectedQuotation; set => SetProperty(ref _selectedQuotation, value); }
@@ -144,6 +147,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     public bool IncludeArchived { get => _includeArchived; set => SetProperty(ref _includeArchived, value); }
     public string StockWarning { get => _stockWarning; private set => SetProperty(ref _stockWarning, value); }
     public bool HasUnsavedChanges { get => _hasUnsavedChanges; private set => SetProperty(ref _hasUnsavedChanges, value); }
+    public ProfitEstimate InternalProfit { get => _profitEstimate; private set => SetProperty(ref _profitEstimate, value); }
     public bool CanEditCurrent => CurrentQuotation?.Status is QuotationStatus.Draft or QuotationStatus.Sent or QuotationStatus.UnderReview or QuotationStatus.Rejected;
 
     public async Task InitializeAsync()
@@ -184,16 +188,18 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
         if (Items.Count == 0)
         {
             StockWarning = "";
+            InternalProfit = ProfitEstimate.Empty;
             return;
         }
         try
         {
             _calculator.Calculate(CurrentQuotation);
+            InternalProfit = ProfitEstimateCalculator.ForQuotation(CurrentQuotation);
             StockWarning = BuildStockWarning();
             Raise(nameof(CurrentQuotation));
             RefreshItems();
         }
-        catch (InvalidOperationException ex) { StatusMessage = ex.Message; }
+        catch (InvalidOperationException ex) { InternalProfit = ProfitEstimate.Empty; StatusMessage = ex.Message; }
     }
 
     private async Task NewAsync()
@@ -344,6 +350,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
             BarcodeSnapshot = product.Barcode, DescriptionSnapshot = product.Description, UnitSnapshot = product.Unit,
             BrandSnapshot = product.Brand, ManufacturerSnapshot = product.Manufacturer, WarrantySnapshot = product.Warranty,
             AvailableStockSnapshot = product.CurrentQuantity, Quantity = 1, UnitPrice = product.SellingPrice,
+            CostPriceSnapshot = product.CostPrice > 0 ? product.CostPrice : null,
             TaxPercentage = product.TaxPercentage, DiscountType = DiscountType.Percentage, DiscountValue = product.DefaultDiscount
         });
     }
@@ -362,7 +369,8 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
             PartNumberSnapshot = source.PartNumberSnapshot, BarcodeSnapshot = source.BarcodeSnapshot, DescriptionSnapshot = source.DescriptionSnapshot,
             UnitSnapshot = source.UnitSnapshot, BrandSnapshot = source.BrandSnapshot, ManufacturerSnapshot = source.ManufacturerSnapshot,
             WarrantySnapshot = source.WarrantySnapshot, AvailableStockSnapshot = source.AvailableStockSnapshot, Quantity = source.Quantity,
-            UnitPrice = source.UnitPrice, DiscountType = source.DiscountType, DiscountValue = source.DiscountValue,
+            UnitPrice = source.UnitPrice, CostPriceSnapshot = source.CostPriceSnapshot,
+            DiscountType = source.DiscountType, DiscountValue = source.DiscountValue,
             DiscountPercentage = source.DiscountPercentage, TaxPercentage = source.TaxPercentage, Notes = source.Notes
         });
         return Task.CompletedTask;

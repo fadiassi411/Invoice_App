@@ -86,6 +86,8 @@ public sealed class QuotationItem : BaseEntity
     public decimal AvailableStockSnapshot { get; set; }
     public decimal Quantity { get; set; } = 1m;
     public decimal UnitPrice { get; set; }
+    // Internal unit cost. Null means that the cost has not been supplied.
+    public decimal? CostPriceSnapshot { get; set; }
     public DiscountType DiscountType { get; set; } = DiscountType.Percentage;
     public decimal DiscountPercentage { get; set; }
     public decimal DiscountValue { get; set; }
