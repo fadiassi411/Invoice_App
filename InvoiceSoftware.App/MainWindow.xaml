@@ -994,41 +994,57 @@
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="Price List" FontSize="24" FontWeight="SemiBold" Foreground="#18314F" />
-                                <TextBlock Text="Maintain customer-facing item prices and optional images. Excel imports update matching reference numbers or create new items." Foreground="#52667D" Margin="0,5,0,10" />
+                                <TextBlock Text="Maintain a customer-facing catalogue that is completely separate from Store / Inventory. Imports and edits here never change stock products or quantities." Foreground="#52667D" Margin="0,5,0,10" TextWrapping="Wrap" />
                                 <WrapPanel>
+                                    <Button Content="New Item" Command="{Binding NewPriceListItemCommand}" />
+                                    <Button Content="Save Item" Command="{Binding SavePriceListItemCommand}" />
+                                    <Button Content="Delete Item" Command="{Binding DeletePriceListItemCommand}" Background="#C92A2A" />
                                     <Button Content="Export Excel" Command="{Binding ExportPriceListExcelCommand}" ToolTip="Exports the visible active price list, including available product images" />
-                                    <Button Content="Import Excel" Command="{Binding ImportPriceListExcelCommand}" ToolTip="Imports ReferenceNumber, ProductName, SellingPrice, and optional price-list fields" />
-                                    <Button Content="Refresh" Command="{Binding SearchInventoryCommand}" />
+                                    <Button Content="Import Excel" Command="{Binding ImportPriceListExcelCommand}" ToolTip="Imports independent price-list entries by reference number; inventory remains unchanged" />
+                                    <Button Content="Refresh" Command="{Binding RefreshPriceListCommand}" />
                                 </WrapPanel>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}">
-                            <DataGrid ItemsSource="{Binding InventoryProducts}" SelectedItem="{Binding InventoryProduct}" IsReadOnly="True" AutoGenerateColumns="False" MinHeight="290" CanUserSortColumns="True">
+                            <DataGrid ItemsSource="{Binding PriceListItems}" SelectedItem="{Binding PriceListItem}" IsReadOnly="True" AutoGenerateColumns="False" MinHeight="290" CanUserSortColumns="True">
                                 <DataGrid.Columns>
                                     <DataGridTemplateColumn Header="Image" Width="76">
                                         <DataGridTemplateColumn.CellTemplate><DataTemplate><Border Width="50" Height="50" Background="#F1F5F9" CornerRadius="5" ClipToBounds="True"><Image Source="{Binding ImagePath}" Stretch="UniformToFill" /></Border></DataTemplate></DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTextColumn Header="Reference" Binding="{Binding Code}" Width="125" />
-                                    <DataGridTextColumn Header="Product" Binding="{Binding Name}" Width="190" />
+                                    <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceNumber}" Width="125" />
+                                    <DataGridTextColumn Header="Item" Binding="{Binding ProductName}" Width="190" />
                                     <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" />
-                                    <DataGridTextColumn Header="Category" Binding="{Binding CategoryRecord.Name}" Width="125" />
+                                    <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="125" />
+                                    <DataGridTextColumn Header="Brand" Binding="{Binding Brand}" Width="110" />
                                     <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="75" />
                                     <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100" />
-                                    <DataGridTextColumn Header="Tax %" Binding="{Binding TaxPercentage, StringFormat=N2}" Width="75" />
+                                    <DataGridTextColumn Header="Tax %" Binding="{Binding TaxRate, StringFormat=N2}" Width="75" />
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Border>
                         <Border Style="{StaticResource Card}">
                             <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <Border Width="126" Height="126" Background="#F1F5F9" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Top"><Image Source="{Binding InventoryProduct.ImagePath}" Stretch="UniformToFill" /></Border>
-                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                    <TextBlock Text="Selected item image" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="Images are optional and copied into the application's local asset folder when selected." Foreground="#52667D" TextWrapping="Wrap" Margin="0,4,0,8" />
-                                    <WrapPanel><Button Content="Choose Image" Command="{Binding ChooseProductImageCommand}"/><Button Content="Remove Image" Command="{Binding ClearProductImageCommand}"/><Button Content="Save Product" Command="{Binding SaveInventoryProductCommand}"/></WrapPanel>
-                                    <TextBlock Text="{Binding InventoryProduct.Code}" FontWeight="SemiBold" Margin="0,10,0,0" />
-                                    <TextBlock Text="{Binding InventoryProduct.Name}" Foreground="#52667D" />
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Optional image" FontSize="17" FontWeight="SemiBold" />
+                                    <Border Width="142" Height="142" Margin="0,8,0,8" HorizontalAlignment="Left" Background="#F1F5F9" CornerRadius="8" ClipToBounds="True"><Image Source="{Binding PriceListItem.ImagePath}" Stretch="UniformToFill" /></Border>
+                                    <Button Content="Choose Image" Command="{Binding ChoosePriceListImageCommand}" HorizontalAlignment="Left" />
+                                    <Button Content="Remove Image" Command="{Binding ClearPriceListImageCommand}" HorizontalAlignment="Left" />
                                 </StackPanel>
+                                <Grid Grid.Column="1" Margin="12,0,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,8"><TextBlock Text="Reference number *"/><TextBox Text="{Binding PriceListItem.ReferenceNumber, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,12,8"><TextBlock Text="Item name *"/><TextBox Text="{Binding PriceListItem.ProductName, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8"><TextBlock Text="Selling price *"/><TextBox Text="{Binding PriceListItem.SellingPrice, UpdateSourceTrigger=LostFocus}"/></StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,12,8"><TextBlock Text="Description"/><TextBox Text="{Binding PriceListItem.Description, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,8"><TextBlock Text="Tax rate %"/><TextBox Text="{Binding PriceListItem.TaxRate, UpdateSourceTrigger=LostFocus}"/></StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,8"><TextBlock Text="Category"/><TextBox Text="{Binding PriceListItem.Category, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,12,8"><TextBlock Text="Brand"/><TextBox Text="{Binding PriceListItem.Brand, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,8"><TextBlock Text="Unit"/><TextBox Text="{Binding PriceListItem.Unit, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+                                    <CheckBox Grid.Row="3" Grid.Column="0" Content="Active" IsChecked="{Binding PriceListItem.IsActive}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="These entries are stored separately and are not available as invoice or stock items unless you create them separately in Store / Inventory." Foreground="#52667D" TextWrapping="Wrap" />
+                                </Grid>
                             </Grid>
                         </Border>
                     </StackPanel>

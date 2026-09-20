@@ -32,20 +32,6 @@ public sealed class InventoryIntegrationTests
     }
 
     [Fact]
-    public async Task Product_image_path_is_preserved_when_product_is_saved()
-    {
-        await using var fixture = await TestDatabase.CreateAsync();
-        var inventory = new InventoryService(fixture.Db);
-        var product = NewProduct("IMAGE-100", 0);
-        product.ImagePath = @"C:\\PriceListAssets\\IMAGE-100.png";
-
-        var saved = await inventory.SaveProductAsync(product);
-        fixture.Db.ChangeTracker.Clear();
-
-        Assert.Equal(product.ImagePath, await fixture.Db.Products.Where(x => x.Id == saved.Id).Select(x => x.ImagePath).SingleAsync());
-    }
-
-    [Fact]
     public async Task Finalized_invoice_deducts_once_and_modifications_apply_only_the_difference()
     {
         await using var fixture = await TestDatabase.CreateAsync();

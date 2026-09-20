@@ -7,7 +7,6 @@ using System.Windows.Documents;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Text;
-using ClosedXML.Excel;
 using InvoiceSoftware.App;
 using InvoiceSoftware.Core.Models;
 using InvoiceSoftware.Core.Services;
@@ -27,6 +26,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IDashboardService _dashboard;
     private readonly IBackupService _backup;
     private readonly IInventoryService _inventory;
+    private readonly IPriceListService _priceList;
     private readonly IInvoicePdfService _pdf;
     private readonly IInvoiceLicenseService _licenseService;
 
@@ -40,6 +40,7 @@ public sealed class MainViewModel : ObservableObject
     private ProfitEstimate _invoiceProfitEstimate = ProfitEstimate.Empty;
     private DashboardSnapshot? _snapshot;
     private Product? _inventoryProduct;
+    private PriceListItem? _priceListItem;
     private Category? _selectedCategoryFilter;
     private Supplier? _selectedSupplierFilter;
     private string _inventorySearchText = "";
@@ -55,7 +56,7 @@ public sealed class MainViewModel : ObservableObject
     private DateTime? _reportTo = DateTime.Today;
     private InvoiceLicenseStatus _licenseStatus;
 
-    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory, QuotationWorkspaceViewModel quotations, IInvoiceLicenseService licenseService)
+    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory, IPriceListService priceList, QuotationWorkspaceViewModel quotations, IInvoiceLicenseService licenseService)
     {
         _lookup = lookup;
         _invoices = invoices;
@@ -64,6 +65,7 @@ public sealed class MainViewModel : ObservableObject
         _backup = backup;
         _pdf = pdf;
         _inventory = inventory;
+        _priceList = priceList;
         _licenseService = licenseService;
         _licenseStatus = licenseService.GetStatus();
         Quotations = quotations;
@@ -78,6 +80,7 @@ public sealed class MainViewModel : ObservableObject
         Invoices = [];
         Receipts = [];
         InventoryProducts = [];
+        PriceListItems = [];
         Categories = [];
         Suppliers = [];
         StockMovements = [];
@@ -121,10 +124,14 @@ public sealed class MainViewModel : ObservableObject
         ViewStockHistoryCommand = new RelayCommand(ViewStockHistoryAsync);
         ExportProductsCsvCommand = new RelayCommand(ExportProductsCsvAsync);
         ImportProductsCsvCommand = new RelayCommand(ImportProductsCsvAsync);
+        NewPriceListItemCommand = new RelayCommand(NewPriceListItemAsync);
+        SavePriceListItemCommand = new RelayCommand(SavePriceListItemAsync);
+        DeletePriceListItemCommand = new RelayCommand(DeletePriceListItemAsync);
+        RefreshPriceListCommand = new RelayCommand(() => RefreshPriceListAsync());
         ExportPriceListExcelCommand = new RelayCommand(ExportPriceListExcelAsync);
         ImportPriceListExcelCommand = new RelayCommand(ImportPriceListExcelAsync);
-        ChooseProductImageCommand = new RelayCommand(ChooseProductImageAsync);
-        ClearProductImageCommand = new RelayCommand(ClearProductImageAsync);
+        ChoosePriceListImageCommand = new RelayCommand(ChoosePriceListImageAsync);
+        ClearPriceListImageCommand = new RelayCommand(ClearPriceListImageAsync);
         PrintProductsCommand = new RelayCommand(PrintProductsAsync);
         NewCategoryCommand = new RelayCommand(NewCategoryAsync);
         SaveCategoryCommand = new RelayCommand(SaveCategoryAsync);
@@ -145,6 +152,7 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<InvoiceItem> InvoiceItems { get; }
     public ObservableCollection<Receipt> Receipts { get; }
     public ObservableCollection<Product> InventoryProducts { get; }
+    public ObservableCollection<PriceListItem> PriceListItems { get; }
     public ObservableCollection<Category> Categories { get; }
     public ObservableCollection<Supplier> Suppliers { get; }
     public ObservableCollection<StockMovement> StockMovements { get; }
@@ -189,10 +197,14 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ViewStockHistoryCommand { get; }
     public ICommand ExportProductsCsvCommand { get; }
     public ICommand ImportProductsCsvCommand { get; }
+    public ICommand NewPriceListItemCommand { get; }
+    public ICommand SavePriceListItemCommand { get; }
+    public ICommand DeletePriceListItemCommand { get; }
+    public ICommand RefreshPriceListCommand { get; }
     public ICommand ExportPriceListExcelCommand { get; }
     public ICommand ImportPriceListExcelCommand { get; }
-    public ICommand ChooseProductImageCommand { get; }
-    public ICommand ClearProductImageCommand { get; }
+    public ICommand ChoosePriceListImageCommand { get; }
+    public ICommand ClearPriceListImageCommand { get; }
     public ICommand PrintProductsCommand { get; }
     public ICommand NewCategoryCommand { get; }
     public ICommand SaveCategoryCommand { get; }
@@ -286,6 +298,7 @@ public sealed class MainViewModel : ObservableObject
             }
         }
     }
+    public PriceListItem? PriceListItem { get => _priceListItem; set => SetProperty(ref _priceListItem, value); }
     public Category? SelectedCategoryFilter { get => _selectedCategoryFilter; set => SetProperty(ref _selectedCategoryFilter, value); }
     public Supplier? SelectedSupplierFilter { get => _selectedSupplierFilter; set => SetProperty(ref _selectedSupplierFilter, value); }
     public string InventorySearchText { get => _inventorySearchText; set => SetProperty(ref _inventorySearchText, value); }
@@ -369,6 +382,7 @@ public sealed class MainViewModel : ObservableObject
             await Replace(Receipts, await _receipts.GetReceiptsAsync());
             Snapshot = await _dashboard.GetSnapshotAsync();
             await RefreshInventoryAsync();
+            if (SelectedSection == "Price List") await RefreshPriceListAsync();
             if (SelectedSection == "Inventory Reports") await RefreshReportsAsync();
             StatusMessage = "Data refreshed.";
         }
@@ -402,9 +416,11 @@ public sealed class MainViewModel : ObservableObject
                     break;
                 }
                 case "Store / Inventory":
-                case "Price List":
                     InventorySearchText = term;
                     await SearchInventoryAsync();
+                    break;
+                case "Price List":
+                    await RefreshPriceListAsync(term);
                     break;
                 case "Inventory Reports":
                     await SearchInventoryReportsAsync(term);
@@ -843,45 +859,30 @@ public sealed class MainViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private Task ChooseProductImageAsync()
+    private Task ChoosePriceListImageAsync()
     {
-        if (InventoryProduct is null)
+        if (PriceListItem is null)
         {
-            StatusMessage = "Select or create a product before choosing an image.";
+            StatusMessage = "Select or create a price-list item before choosing an image.";
             return Task.CompletedTask;
         }
 
         var dialog = new OpenFileDialog { Filter = "Image files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp" };
         if (dialog.ShowDialog() != true) return Task.CompletedTask;
 
-        InventoryProduct.ImagePath = CopyProductImage(dialog.FileName, InventoryProduct.Code);
-        Raise(nameof(InventoryProduct));
-        StatusMessage = "Product image selected. Save the product to keep it.";
+        PriceListItem.ImagePath = _priceList.CopyImage(dialog.FileName, PriceListItem.ReferenceNumber);
+        Raise(nameof(PriceListItem));
+        StatusMessage = "Item image selected. Save the price-list item to keep it.";
         return Task.CompletedTask;
     }
 
-    private Task ClearProductImageAsync()
+    private Task ClearPriceListImageAsync()
     {
-        if (InventoryProduct is null) return Task.CompletedTask;
-        InventoryProduct.ImagePath = null;
-        Raise(nameof(InventoryProduct));
-        StatusMessage = "Product image removed. Save the product to keep the change.";
+        if (PriceListItem is null) return Task.CompletedTask;
+        PriceListItem.ImagePath = null;
+        Raise(nameof(PriceListItem));
+        StatusMessage = "Item image removed. Save the price-list item to keep the change.";
         return Task.CompletedTask;
-    }
-
-    private static string CopyProductImage(string sourcePath, string productCode)
-    {
-        var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
-        if (extension is not ".png" and not ".jpg" and not ".jpeg" and not ".bmp")
-            throw new InvalidOperationException("Use a PNG, JPG, JPEG, or BMP image.");
-
-        var productImageFolder = Path.Combine(DatabasePaths.AppDataFolder, "Assets", "ProductImages");
-        Directory.CreateDirectory(productImageFolder);
-        var safeCode = string.Concat(productCode.Where(char.IsLetterOrDigit));
-        if (string.IsNullOrWhiteSpace(safeCode)) safeCode = "product";
-        var target = Path.Combine(productImageFolder, $"{safeCode}-{Guid.NewGuid():N}{extension}");
-        File.Copy(sourcePath, target, overwrite: false);
-        return target;
     }
 
     private async Task BackupAsync()
@@ -1130,105 +1131,84 @@ public sealed class MainViewModel : ObservableObject
         await RefreshInventoryAsync(); await Replace(Products, await _lookup.GetProductsAsync()); StatusMessage = $"Imported {imported} product(s).";
     }
 
+    private Task NewPriceListItemAsync()
+    {
+        PriceListItem = new PriceListItem
+        {
+            Unit = "Piece",
+            TaxRate = Company.DefaultTaxPercentage,
+            IsActive = true
+        };
+        StatusMessage = "Enter the independent price-list item details.";
+        return Task.CompletedTask;
+    }
+
+    private async Task SavePriceListItemAsync()
+    {
+        try
+        {
+            if (PriceListItem is null) { await NewPriceListItemAsync(); return; }
+            var saved = await _priceList.SaveAsync(PriceListItem);
+            await RefreshPriceListAsync();
+            PriceListItem = PriceListItems.FirstOrDefault(x => x.Id == saved.Id);
+            StatusMessage = $"Price-list item {saved.ReferenceNumber} saved.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+            MessageBox.Show(ex.Message, "Price-list validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private async Task DeletePriceListItemAsync()
+    {
+        if (PriceListItem is null || PriceListItem.Id == 0) return;
+        if (MessageBox.Show($"Delete price-list item '{PriceListItem.ReferenceNumber} - {PriceListItem.ProductName}'?", "Confirm price-list deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        await _priceList.DeleteAsync(PriceListItem.Id);
+        PriceListItem = null;
+        await RefreshPriceListAsync();
+        StatusMessage = "Price-list item deleted. Store / Inventory was not changed.";
+    }
+
+    private async Task RefreshPriceListAsync(string? searchText = null)
+    {
+        var selectedId = PriceListItem?.Id;
+        await Replace(PriceListItems, await _priceList.SearchAsync(searchText));
+        PriceListItem = selectedId is null ? PriceListItems.FirstOrDefault() : PriceListItems.FirstOrDefault(x => x.Id == selectedId);
+        StatusMessage = $"{PriceListItems.Count} independent price-list item(s) found.";
+    }
+
     private async Task ExportPriceListExcelAsync()
     {
-        var dialog = new SaveFileDialog { Filter = "Excel workbook (*.xlsx)|*.xlsx", FileName = $"price-list-{DateTime.Today:yyyyMMdd}.xlsx" };
-        if (dialog.ShowDialog() != true) return;
-
-        using var workbook = new XLWorkbook();
-        var sheet = workbook.Worksheets.Add("Price List");
-        var headers = new[] { "Image", "ReferenceNumber", "ProductName", "Description", "Category", "Brand", "Unit", "SellingPrice", "TaxRate", "ImagePath" };
-        for (var column = 0; column < headers.Length; column++) sheet.Cell(1, column + 1).Value = headers[column];
-        var headerRange = sheet.Range(1, 1, 1, headers.Length);
-        headerRange.Style.Font.Bold = true;
-        headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("1E83C6");
-        headerRange.Style.Font.FontColor = XLColor.White;
-        sheet.SheetView.FreezeRows(1);
-
-        var row = 2;
-        foreach (var product in InventoryProducts.Where(x => x.IsActive))
+        try
         {
-            sheet.Row(row).Height = 48;
-            sheet.Cell(row, 2).Value = product.Code;
-            sheet.Cell(row, 3).Value = product.Name;
-            sheet.Cell(row, 4).Value = product.Description;
-            sheet.Cell(row, 5).Value = product.CategoryRecord?.Name ?? product.Category ?? "";
-            sheet.Cell(row, 6).Value = product.Brand ?? "";
-            sheet.Cell(row, 7).Value = product.Unit;
-            sheet.Cell(row, 8).Value = product.SellingPrice;
-            sheet.Cell(row, 9).Value = product.TaxPercentage;
-            // The path is optional and makes image re-import practical when the workbook stays on the same computer.
-            sheet.Cell(row, 10).Value = product.ImagePath ?? "";
-            if (!string.IsNullOrWhiteSpace(product.ImagePath) && File.Exists(product.ImagePath))
-                sheet.AddPicture(product.ImagePath).MoveTo(sheet.Cell(row, 1)).WithSize(42, 42);
-            row++;
+            var dialog = new SaveFileDialog { Filter = "Excel workbook (*.xlsx)|*.xlsx", FileName = $"price-list-{DateTime.Today:yyyyMMdd}.xlsx" };
+            if (dialog.ShowDialog() != true) return;
+            await _priceList.ExportExcelAsync(dialog.FileName, PriceListItems);
+            StatusMessage = $"Price list exported to {dialog.FileName}.";
         }
-
-        sheet.Column(1).Width = 10;
-        sheet.Column(2).Width = 18;
-        sheet.Column(3).Width = 30;
-        sheet.Column(4).Width = 44;
-        sheet.Column(5).Width = 20;
-        sheet.Column(6).Width = 20;
-        sheet.Column(7).Width = 12;
-        sheet.Column(8).Width = 15;
-        sheet.Column(9).Width = 12;
-        sheet.Column(10).Width = 42;
-        sheet.Column(8).Style.NumberFormat.Format = "0.00";
-        sheet.Column(9).Style.NumberFormat.Format = "0.00";
-        sheet.RangeUsed()?.SetAutoFilter();
-        workbook.SaveAs(dialog.FileName);
-        StatusMessage = $"Price list exported to {dialog.FileName}.";
+        catch (Exception ex)
+        {
+            StatusMessage = $"Price-list export failed: {ex.Message}";
+            MessageBox.Show(ex.Message, "Price-list export failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task ImportPriceListExcelAsync()
     {
-        var dialog = new OpenFileDialog { Filter = "Excel workbook (*.xlsx)|*.xlsx" };
-        if (dialog.ShowDialog() != true) return;
-
-        using var workbook = new XLWorkbook(dialog.FileName);
-        var sheet = workbook.Worksheets.FirstOrDefault() ?? throw new InvalidOperationException("The workbook has no worksheet.");
-        var header = sheet.Row(1).CellsUsed().ToDictionary(cell => cell.GetString().Trim(), cell => cell.Address.ColumnNumber, StringComparer.OrdinalIgnoreCase);
-        if (!header.ContainsKey("ReferenceNumber") || !header.ContainsKey("ProductName") || !header.ContainsKey("SellingPrice"))
-            throw new InvalidOperationException("The workbook must contain ReferenceNumber, ProductName, and SellingPrice columns. Export a Price List first to get the supported template.");
-
-        string Value(IXLRow row, string name) => header.TryGetValue(name, out var column) ? row.Cell(column).GetString().Trim() : "";
-        decimal Number(IXLRow row, string name) => decimal.TryParse(Value(row, name), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value) ? value : 0;
-        var categories = (await _inventory.GetCategoriesAsync()).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
-        var imported = 0;
-        foreach (var row in sheet.RowsUsed().Skip(1))
+        try
         {
-            var code = Value(row, "ReferenceNumber");
-            if (string.IsNullOrWhiteSpace(code)) continue;
-            var existing = (await _inventory.SearchProductsAsync(code)).FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
-            var product = existing ?? new Product { Unit = "Piece", TrackStock = false, IsActive = true, Type = ProductType.Product };
-            product.Code = code;
-            product.Name = Value(row, "ProductName");
-            product.Description = Value(row, "Description");
-            if (string.IsNullOrWhiteSpace(product.Description)) product.Description = product.Name;
-            product.Brand = Value(row, "Brand");
-            product.Unit = string.IsNullOrWhiteSpace(Value(row, "Unit")) ? product.Unit : Value(row, "Unit");
-            product.SellingPrice = Number(row, "SellingPrice");
-            product.TaxPercentage = Number(row, "TaxRate");
-            var categoryName = Value(row, "Category");
-            if (!string.IsNullOrWhiteSpace(categoryName))
-            {
-                if (!categories.TryGetValue(categoryName, out var category))
-                {
-                    category = await _inventory.SaveCategoryAsync(new Category { Name = categoryName, IsActive = true });
-                    categories[categoryName] = category;
-                }
-                product.CategoryId = category.Id;
-                product.Category = category.Name;
-            }
-            var imagePath = Value(row, "ImagePath");
-            if (!string.IsNullOrWhiteSpace(imagePath) && File.Exists(imagePath)) product.ImagePath = CopyProductImage(imagePath, product.Code);
-            await _inventory.SaveProductAsync(product);
-            imported++;
+            var dialog = new OpenFileDialog { Filter = "Excel workbook (*.xlsx)|*.xlsx" };
+            if (dialog.ShowDialog() != true) return;
+            var imported = await _priceList.ImportExcelAsync(dialog.FileName);
+            await RefreshPriceListAsync();
+            StatusMessage = $"Imported {imported} independent price-list item(s). Store / Inventory was not changed.";
         }
-        await RefreshInventoryAsync();
-        await Replace(Products, await _lookup.GetProductsAsync());
-        StatusMessage = $"Imported {imported} price-list item(s).";
+        catch (Exception ex)
+        {
+            StatusMessage = $"Price-list import failed: {ex.Message}";
+            MessageBox.Show(ex.Message, "Price-list import failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task PrintProductsAsync()

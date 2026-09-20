@@ -9,6 +9,7 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
     public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
@@ -42,6 +43,8 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
         modelBuilder.Entity<Product>().HasIndex(x => x.Barcode);
         modelBuilder.Entity<Product>().HasIndex(x => x.Name);
         modelBuilder.Entity<Product>().HasIndex(x => x.Category);
+        modelBuilder.Entity<PriceListItem>().HasIndex(x => x.ReferenceNumber).IsUnique();
+        modelBuilder.Entity<PriceListItem>().HasIndex(x => x.ProductName);
         modelBuilder.Entity<Category>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<Supplier>().HasIndex(x => x.CompanyName);
         modelBuilder.Entity<StockMovement>().HasIndex(x => new { x.ProductId, x.TransactionDate });

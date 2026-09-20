@@ -93,7 +93,7 @@ public sealed class InventoryService(InvoiceDbContext db) : IInventoryService
             Unit = source.Unit, CostPrice = source.CostPrice, SellingPrice = source.SellingPrice, TaxPercentage = source.TaxPercentage,
             DefaultDiscount = source.DefaultDiscount, MinimumQuantity = source.MinimumQuantity, ReorderQuantity = source.ReorderQuantity,
             StorageLocation = source.StorageLocation, ShelfBinNumber = source.ShelfBinNumber, TrackStock = source.TrackStock,
-            Notes = source.Notes, ImagePath = source.ImagePath, IsActive = source.IsActive
+            Notes = source.Notes, IsActive = source.IsActive
         };
         return await SaveProductAsync(copy, 0, "Duplicated product", cancellationToken);
     }

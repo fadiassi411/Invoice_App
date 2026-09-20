@@ -56,8 +56,6 @@ public sealed class Product : BaseEntity
     public bool TrackStock { get; set; } = true;
     public bool IsActive { get; set; } = true;
     public string? Notes { get; set; }
-    // Kept as an application-managed file path rather than storing large binaries in SQLite.
-    public string? ImagePath { get; set; }
     public List<StockMovement> StockMovements { get; set; } = [];
     public string StockStatus => !IsActive ? "Inactive" : !TrackStock ? "Not Tracked" : CurrentQuantity <= 0 ? "Out of Stock" : CurrentQuantity <= MinimumQuantity ? "Low Stock" : "Normal";
 }
