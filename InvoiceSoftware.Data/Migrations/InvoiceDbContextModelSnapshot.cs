@@ -947,6 +947,9 @@ namespace InvoiceSoftware.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ImagePath")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Manufacturer")
                         .HasColumnType("TEXT");
 

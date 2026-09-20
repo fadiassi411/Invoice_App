@@ -77,6 +77,10 @@ The current version includes a working local database, sample company/customer/p
 
 The **Store / Inventory** workspace manages products, categories, suppliers, stock adjustments, CSV import/export, printable product lists, and the permanent stock-movement ledger. Product selection in invoice entry searches reference numbers, barcodes, names, and descriptions. Saving an invoice finalizes it and synchronizes stock transactionally; later edits apply only the quantity difference, while cancellation or deletion restores stock. Services and products with stock tracking disabled never affect inventory. The **Inventory Reports** workspace provides current-stock, low-stock, sales, revenue, cost, gross-profit, and margin reporting with CSV export.
 
+## Price List (v1.3.0)
+
+The **Price List** page provides a customer-facing catalogue view of active products, their selling prices, tax rate, and optional item images. It exports a formatted `.xlsx` workbook with embedded available images, and imports the same workbook format. Imports match existing products by `ReferenceNumber`; unmatched references create a new non-stock-tracked product. Required Excel columns are `ReferenceNumber`, `ProductName`, and `SellingPrice`; category, brand, unit, description, tax rate, and a local optional `ImagePath` can also be supplied. Item images selected in the app are copied to `%LOCALAPPDATA%\InvoiceSoftware\Assets\ProductImages`, so the original image file can be moved or deleted safely after saving.
+
 Migration `AddStoreInventoryManagement` creates the normalized inventory schema. `BackfillLegacyInventoryData` preserves existing products, derives product names and stock-tracking behavior, links matching legacy categories, and records opening stock balances. Application startup applies both migrations automatically, including after an older backup is restored.
 
 ## Quotation Management

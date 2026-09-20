@@ -54,6 +54,7 @@
                 <DataTrigger Binding="{Binding}" Value="Customers"><Setter TargetName="NavIcon" Property="Text" Value="&#xE716;" /></DataTrigger>
                 <DataTrigger Binding="{Binding}" Value="Receipts"><Setter TargetName="NavIcon" Property="Text" Value="&#xE8C7;" /></DataTrigger>
                 <DataTrigger Binding="{Binding}" Value="Store / Inventory"><Setter TargetName="NavIcon" Property="Text" Value="&#xE7C3;" /></DataTrigger>
+                <DataTrigger Binding="{Binding}" Value="Price List"><Setter TargetName="NavIcon" Property="Text" Value="&#xE8F1;" /></DataTrigger>
                 <DataTrigger Binding="{Binding}" Value="Products and Services"><Setter TargetName="NavIcon" Property="Text" Value="&#xE7B8;" /></DataTrigger>
                 <DataTrigger Binding="{Binding}" Value="Inventory Reports"><Setter TargetName="NavIcon" Property="Text" Value="&#xE9D2;" /></DataTrigger>
                 <DataTrigger Binding="{Binding}" Value="Reports"><Setter TargetName="NavIcon" Property="Text" Value="&#xE9D5;" /></DataTrigger>
@@ -82,6 +83,10 @@
                 </MultiDataTrigger>
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Store / Inventory"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Store / Inventory"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding}" Value="Price List"/><Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=Window}}" Value="Price List"/></MultiDataTrigger.Conditions>
                     <Setter TargetName="NavButton" Property="Tag" Value="Active"/><Setter TargetName="NavIconTile" Property="Background" Value="#1E83C6"/><Setter TargetName="NavIcon" Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
                 <MultiDataTrigger>
@@ -385,6 +390,7 @@
 
                         <TextBlock Text="INVENTORY" Style="{StaticResource SidebarSectionLabel}" />
                         <ItemsControl Style="{StaticResource SidebarNavList}">
+                            <sys:String>Price List</sys:String>
                             <sys:String>Store / Inventory</sys:String>
                             <sys:String>Products and Services</sys:String>
                             <sys:String>Inventory Reports</sys:String>
@@ -981,6 +987,49 @@
                         <Button Content="Add Product / Service" Command="{Binding AddProductCommand}" HorizontalAlignment="Left" />
                         <Border Style="{StaticResource Card}">
                             <DataGrid ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}" AutoGenerateColumns="True" />
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Price List}">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Price List" FontSize="24" FontWeight="SemiBold" Foreground="#18314F" />
+                                <TextBlock Text="Maintain customer-facing item prices and optional images. Excel imports update matching reference numbers or create new items." Foreground="#52667D" Margin="0,5,0,10" />
+                                <WrapPanel>
+                                    <Button Content="Export Excel" Command="{Binding ExportPriceListExcelCommand}" ToolTip="Exports the visible active price list, including available product images" />
+                                    <Button Content="Import Excel" Command="{Binding ImportPriceListExcelCommand}" ToolTip="Imports ReferenceNumber, ProductName, SellingPrice, and optional price-list fields" />
+                                    <Button Content="Refresh" Command="{Binding SearchInventoryCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <DataGrid ItemsSource="{Binding InventoryProducts}" SelectedItem="{Binding InventoryProduct}" IsReadOnly="True" AutoGenerateColumns="False" MinHeight="290" CanUserSortColumns="True">
+                                <DataGrid.Columns>
+                                    <DataGridTemplateColumn Header="Image" Width="76">
+                                        <DataGridTemplateColumn.CellTemplate><DataTemplate><Border Width="50" Height="50" Background="#F1F5F9" CornerRadius="5" ClipToBounds="True"><Image Source="{Binding ImagePath}" Stretch="UniformToFill" /></Border></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Reference" Binding="{Binding Code}" Width="125" />
+                                    <DataGridTextColumn Header="Product" Binding="{Binding Name}" Width="190" />
+                                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" />
+                                    <DataGridTextColumn Header="Category" Binding="{Binding CategoryRecord.Name}" Width="125" />
+                                    <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="75" />
+                                    <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100" />
+                                    <DataGridTextColumn Header="Tax %" Binding="{Binding TaxPercentage, StringFormat=N2}" Width="75" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Border Width="126" Height="126" Background="#F1F5F9" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Top"><Image Source="{Binding InventoryProduct.ImagePath}" Stretch="UniformToFill" /></Border>
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                    <TextBlock Text="Selected item image" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="Images are optional and copied into the application's local asset folder when selected." Foreground="#52667D" TextWrapping="Wrap" Margin="0,4,0,8" />
+                                    <WrapPanel><Button Content="Choose Image" Command="{Binding ChooseProductImageCommand}"/><Button Content="Remove Image" Command="{Binding ClearProductImageCommand}"/><Button Content="Save Product" Command="{Binding SaveInventoryProductCommand}"/></WrapPanel>
+                                    <TextBlock Text="{Binding InventoryProduct.Code}" FontWeight="SemiBold" Margin="0,10,0,0" />
+                                    <TextBlock Text="{Binding InventoryProduct.Name}" Foreground="#52667D" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
                     </StackPanel>
 

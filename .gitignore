@@ -11,3 +11,4 @@ outputs/
 *.log
 .vs/
 TestResults/
+artifacts/
