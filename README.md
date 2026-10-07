@@ -83,6 +83,8 @@ The **Price List** page is an independent customer-facing catalogue. Its entries
 
 Version 1.4 adds an intelligent supplier importer for `.xlsx` and legacy `.xls` files. Version 1.4.1 improves large-list import and display performance. Version 1.4.2 adds a delete button to each item row and a separate supplier-list delete control. Select a supplier, click **Delete Supplier List**, and confirm the number of items shown. Only entries linked to that supplier are removed from the visible Price List; manually created entries and other suppliers' entries remain.
 
+Version 1.5 lets you use independent Price List entries on both documents. In **New Invoice**, choose **Find Price List Item...** beside **Find Product**. In **New Quotation**, open **Item Actions** and choose **Find Price List Item...**. Search and select an entry; its reference, description, unit, selling price, and tax rate are copied into that document. It is a non-stock line, so it does not change Store / Inventory. Its document details remain unchanged if the Price List is later edited or deleted. Prices are never converted between currencies: an explicit currency mismatch is rejected, and an item with no currency requires confirmation before it is added.
+
 To import:
 
 1. Select the supplier and Excel file.

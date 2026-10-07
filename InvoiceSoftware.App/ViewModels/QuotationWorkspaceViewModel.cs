@@ -18,6 +18,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
 {
     private readonly IQuotationService _service;
     private readonly ILookupService _lookup;
+    private readonly IPriceListService _priceList;
     private readonly IQuotationPdfService _pdf;
     private readonly QuotationCalculator _calculator;
     private Quotation? _currentQuotation;
@@ -38,10 +39,11 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     private bool _hasUnsavedChanges;
     private ProfitEstimate _profitEstimate = ProfitEstimate.Empty;
 
-    public QuotationWorkspaceViewModel(IQuotationService service, ILookupService lookup, IQuotationPdfService pdf, QuotationCalculator calculator)
+    public QuotationWorkspaceViewModel(IQuotationService service, ILookupService lookup, IPriceListService priceList, IQuotationPdfService pdf, QuotationCalculator calculator)
     {
         _service = service;
         _lookup = lookup;
+        _priceList = priceList;
         _pdf = pdf;
         _calculator = calculator;
         Quotations = [];
@@ -63,6 +65,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
         ArchiveCommand = new RelayCommand<Quotation>(ArchiveAsync);
         DeleteCommand = new RelayCommand<Quotation>(DeleteAsync);
         AddStockItemCommand = new RelayCommand(AddStockItemAsync);
+        AddPriceListItemCommand = new RelayCommand(AddPriceListItemAsync);
         AddManualItemCommand = new RelayCommand(AddManualItemAsync);
         AddServiceCommand = new RelayCommand(AddServiceAsync);
         AddSectionCommand = new RelayCommand(AddSectionAsync);
@@ -101,6 +104,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     public ICommand ArchiveCommand { get; }
     public ICommand DeleteCommand { get; }
     public ICommand AddStockItemCommand { get; }
+    public ICommand AddPriceListItemCommand { get; }
     public ICommand AddManualItemCommand { get; }
     public ICommand AddServiceCommand { get; }
     public ICommand AddSectionCommand { get; }
@@ -353,6 +357,24 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
             CostPriceSnapshot = product.CostPrice > 0 ? product.CostPrice : null,
             TaxPercentage = product.TaxPercentage, DiscountType = DiscountType.Percentage, DiscountValue = product.DefaultDiscount
         });
+    }
+
+    private async Task AddPriceListItemAsync()
+    {
+        EnsureCurrent();
+        var dialog = new PriceListSelectionDialog(await _priceList.SearchAsync(), "Quotation")
+        {
+            Owner = Application.Current.MainWindow
+        };
+        if (dialog.ShowDialog() != true || dialog.SelectedItem is null) return;
+        var selected = dialog.SelectedItem;
+        var currencyUnspecified = string.IsNullOrWhiteSpace(selected.Currency);
+        if (currencyUnspecified && MessageBox.Show(
+                $"Price List item '{selected.ReferenceNumber}' has no currency. Use its listed price as {CurrentQuotation!.CurrencyCode} on this quotation?",
+                "Confirm Price List currency", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+        AddLine(PriceListDocumentLineFactory.ForQuotation(selected, CurrentQuotation!.CurrencyCode, Items.Count + 1, currencyUnspecified));
+        StatusMessage = $"Price List item {selected.ReferenceNumber} added to quotation without stock tracking.";
     }
 
     private Task AddManualItemAsync() { EnsureCurrent(); AddLine(new QuotationItem { ItemType = QuotationItemType.ManualItem, DescriptionSnapshot = "Custom item", UnitSnapshot = "ea", Quantity = 1, TaxPercentage = Company.DefaultTaxPercentage }); return Task.CompletedTask; }

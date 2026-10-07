@@ -97,6 +97,7 @@ public sealed class MainViewModel : ObservableObject
         NewInvoiceCommand = new RelayCommand(CreateInvoiceAsync);
         AddInvoiceRowCommand = new RelayCommand(AddInvoiceRowAsync);
         SelectProductCommand = new RelayCommand(SelectProductAsync);
+        SelectPriceListForInvoiceCommand = new RelayCommand(SelectPriceListForInvoiceAsync);
         RemoveInvoiceRowCommand = new RelayCommand<InvoiceItem>(RemoveInvoiceRowAsync);
         SaveInvoiceCommand = new RelayCommand(SaveInvoiceAsync);
         EditInvoiceCommand = new RelayCommand<Invoice>(EditInvoiceAsync, invoice => invoice is not null);
@@ -175,6 +176,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand NewInvoiceCommand { get; }
     public ICommand AddInvoiceRowCommand { get; }
     public ICommand SelectProductCommand { get; }
+    public ICommand SelectPriceListForInvoiceCommand { get; }
     public ICommand RemoveInvoiceRowCommand { get; }
     public ICommand SaveInvoiceCommand { get; }
     public ICommand EditInvoiceCommand { get; }
@@ -224,7 +226,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ExportProfitReportCommand { get; }
     public ICommand ActivateLicenseCommand { get; }
 
-    public string ApplicationVersion => "1.4.2";
+    public string ApplicationVersion => "1.5.0";
     public string InstallationId => _licenseService.InstallationId;
     public string LicenseStatus => _licenseStatus.IsLicensed ? "Licensed" : "Not licensed";
     public string LicenseCustomer => _licenseStatus.CustomerName ?? "-";
@@ -549,6 +551,32 @@ public sealed class MainViewModel : ObservableObject
         if (dialog.ShowDialog() != true || dialog.SelectedProduct is null) return;
         SelectedProduct = dialog.SelectedProduct;
         await AddInvoiceRowAsync(SelectedProduct);
+    }
+
+    private async Task SelectPriceListForInvoiceAsync()
+    {
+        if (SelectedInvoice is null)
+        {
+            await CreateInvoiceAsync();
+            if (SelectedInvoice is null) return;
+        }
+
+        var dialog = new PriceListSelectionDialog(await _priceList.SearchAsync(), "Invoice")
+        {
+            Owner = Application.Current.MainWindow
+        };
+        if (dialog.ShowDialog() != true || dialog.SelectedItem is null) return;
+        var selected = dialog.SelectedItem;
+        var currencyUnspecified = string.IsNullOrWhiteSpace(selected.Currency);
+        if (currencyUnspecified && MessageBox.Show(
+                $"Price List item '{selected.ReferenceNumber}' has no currency. Use its listed price as {SelectedInvoice.Currency} on this invoice?",
+                "Confirm Price List currency", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+        var item = PriceListDocumentLineFactory.ForInvoice(selected, SelectedInvoice.Currency, InvoiceItems.Count + 1, currencyUnspecified);
+        SelectedInvoice.Items.Add(item);
+        InvoiceItems.Add(item);
+        RecalculateInvoiceProfit();
+        StatusMessage = $"Price List item {selected.ReferenceNumber} added to invoice without stock tracking.";
     }
 
     private Task RemoveInvoiceRowAsync(InvoiceItem? item)

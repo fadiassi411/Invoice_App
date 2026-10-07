@@ -563,6 +563,7 @@
                                 <DockPanel Margin="0,0,0,8">
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                         <Button Content="Find Product..." Command="{Binding SelectProductCommand}" ToolTip="Search by reference, barcode, name, or description" />
+                                        <Button Content="Find Price List Item..." Command="{Binding SelectPriceListForInvoiceCommand}" ToolTip="Add an independent Price List item without deducting stock" />
                                         <Button Content="Add Custom Row" Command="{Binding AddInvoiceRowCommand}" />
                                         <Button Content="Save Invoice" Command="{Binding SaveInvoiceCommand}" />
                                     </StackPanel>
@@ -760,6 +761,7 @@
                                             <Button.ContextMenu>
                                                 <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
                                                     <MenuItem Header="Find Stock Item..." Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.AddStockItemCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Find Price List Item..." Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.AddPriceListItemCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                     <MenuItem Header="Add Manual Item" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.AddManualItemCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                     <MenuItem Header="Add Service / Labour" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.AddServiceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                     <MenuItem Header="Add Section Header" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.AddSectionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
@@ -1064,7 +1066,7 @@
                                     <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,12,8"><TextBlock Text="Brand"/><TextBox Text="{Binding PriceListItem.Brand, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
                                     <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,8"><TextBlock Text="Unit"/><TextBox Text="{Binding PriceListItem.Unit, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
                                     <CheckBox Grid.Row="3" Grid.Column="0" Content="Active" IsChecked="{Binding PriceListItem.IsActive}" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="These entries are stored separately and are not available as invoice or stock items unless you create them separately in Store / Inventory." Foreground="#52667D" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="Price List items can be added to quotations and invoices as independent non-stock lines. They do not change Store / Inventory quantities." Foreground="#52667D" TextWrapping="Wrap" />
                                 </Grid>
                             </Grid>
                         </Border>

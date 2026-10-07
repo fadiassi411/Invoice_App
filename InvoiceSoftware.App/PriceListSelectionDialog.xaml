@@ -1,0 +1,40 @@
+<Window x:Class="InvoiceSoftware.App.PriceListSelectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Select Price List Item" Width="1000" Height="620" MinWidth="760" MinHeight="450"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource BackgroundBrush}"
+        PreviewKeyDown="OnPreviewKeyDown">
+    <Grid Margin="18">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="Select a Price List item" FontSize="24" FontWeight="SemiBold" Foreground="#0D2B68"/>
+            <TextBlock Text="Search by reference, item, description, category, brand, or supplier. These items do not deduct stock."
+                       Foreground="#607089" Margin="0,3,0,10"/>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBox x:Name="SearchBox" TextChanged="OnSearchChanged" KeyDown="OnSearchKeyDown" FontSize="15"/>
+                <Button Grid.Column="1" Content="Search" Click="OnSearch" MinWidth="92"/>
+                <Button Grid.Column="2" Content="Clear" Click="OnClearSearch" MinWidth="82"/>
+            </Grid>
+            <TextBlock x:Name="ResultMessage" Foreground="#607089" Margin="4,4,0,0"/>
+        </StackPanel>
+        <DataGrid x:Name="ItemsGrid" Grid.Row="1" Margin="0,12" IsReadOnly="True" SelectionMode="Single"
+                  MouseDoubleClick="OnDoubleClick" AutoGenerateColumns="False" EnableRowVirtualization="True"
+                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                  ScrollViewer.CanContentScroll="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceNumber}" Width="125"/>
+                <DataGridTextColumn Header="Item" Binding="{Binding ProductName}" Width="180"/>
+                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+                <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100"/>
+                <DataGridTextColumn Header="Currency" Binding="{Binding Currency}" Width="80"/>
+                <DataGridTextColumn Header="Tax %" Binding="{Binding TaxRate, StringFormat=N2}" Width="70"/>
+                <DataGridTextColumn Header="Supplier" Binding="{Binding Supplier.CompanyName}" Width="140"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" Click="OnCancel"/>
+            <Button x:Name="SelectButton" Content="Add to Invoice" Click="OnSelect" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

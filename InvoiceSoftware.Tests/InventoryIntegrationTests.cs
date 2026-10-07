@@ -11,6 +11,32 @@ namespace InvoiceSoftware.Tests;
 public sealed class InventoryIntegrationTests
 {
     [Fact]
+    public async Task Price_list_invoice_line_saves_without_changing_stock()
+    {
+        await using var fixture = await TestDatabase.CreateAsync();
+        var stock = await new InventoryService(fixture.Db).SaveProductAsync(NewProduct("STOCK-1", 10), 10, "Opening stock");
+        var catalogue = new PriceListItem { ReferenceNumber = "0007-A", ProductName = "Catalogue part", Description = "Original details", Unit = "Piece", SellingPrice = 42.125m, Currency = "USD" };
+        var invoice = new Invoice
+        {
+            ReferenceNumber = $"INV-{Guid.NewGuid():N}", InvoiceNumber = "TEST-PL", CustomerId = 1,
+            Currency = "USD", Status = InvoiceStatus.Finalized,
+            Items = [PriceListDocumentLineFactory.ForInvoice(catalogue, "USD", 1)]
+        };
+
+        await fixture.InvoiceService().SaveAsync(invoice);
+        catalogue.Description = "Changed later";
+        fixture.Db.ChangeTracker.Clear();
+        var stored = await fixture.Db.Invoices.Include(x => x.Items).SingleAsync(x => x.Id == invoice.Id);
+
+        Assert.Equal("0007-A", stored.Items.Single().ProductReferenceSnapshot);
+        Assert.Equal("Original details", stored.Items.Single().Description);
+        Assert.Equal(42.125m, stored.Items.Single().UnitPrice);
+        Assert.Null(stored.Items.Single().ProductId);
+        Assert.Equal(10m, await fixture.QuantityAsync(stock.Id));
+        Assert.False(await fixture.Db.StockMovements.AnyAsync(x => x.RelatedInvoiceId == invoice.Id));
+    }
+
+    [Fact]
     public async Task Product_reference_is_unique_and_searchable()
     {
         await using var fixture = await TestDatabase.CreateAsync();
