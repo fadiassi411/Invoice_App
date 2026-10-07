@@ -42,6 +42,7 @@ public sealed class MainViewModel : ObservableObject
     private DashboardSnapshot? _snapshot;
     private Product? _inventoryProduct;
     private PriceListItem? _priceListItem;
+    private Supplier? _priceListDeleteSupplier;
     private ObservableCollection<PriceListItem> _priceListItems = [];
     private Category? _selectedCategoryFilter;
     private Supplier? _selectedSupplierFilter;
@@ -128,7 +129,8 @@ public sealed class MainViewModel : ObservableObject
         ImportProductsCsvCommand = new RelayCommand(ImportProductsCsvAsync);
         NewPriceListItemCommand = new RelayCommand(NewPriceListItemAsync);
         SavePriceListItemCommand = new RelayCommand(SavePriceListItemAsync);
-        DeletePriceListItemCommand = new RelayCommand(DeletePriceListItemAsync);
+        DeletePriceListItemCommand = new RelayCommand<PriceListItem>(DeletePriceListItemAsync);
+        DeleteSupplierPriceListCommand = new RelayCommand(DeleteSupplierPriceListAsync);
         RefreshPriceListCommand = new RelayCommand(() => RefreshPriceListAsync());
         ExportPriceListExcelCommand = new RelayCommand(ExportPriceListExcelAsync);
         ImportPriceListExcelCommand = new RelayCommand(ImportPriceListExcelAsync);
@@ -206,6 +208,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand NewPriceListItemCommand { get; }
     public ICommand SavePriceListItemCommand { get; }
     public ICommand DeletePriceListItemCommand { get; }
+    public ICommand DeleteSupplierPriceListCommand { get; }
     public ICommand RefreshPriceListCommand { get; }
     public ICommand ExportPriceListExcelCommand { get; }
     public ICommand ImportPriceListExcelCommand { get; }
@@ -221,7 +224,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ExportProfitReportCommand { get; }
     public ICommand ActivateLicenseCommand { get; }
 
-    public string ApplicationVersion => "1.4.1";
+    public string ApplicationVersion => "1.4.2";
     public string InstallationId => _licenseService.InstallationId;
     public string LicenseStatus => _licenseStatus.IsLicensed ? "Licensed" : "Not licensed";
     public string LicenseCustomer => _licenseStatus.CustomerName ?? "-";
@@ -305,6 +308,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
     public PriceListItem? PriceListItem { get => _priceListItem; set => SetProperty(ref _priceListItem, value); }
+    public Supplier? PriceListDeleteSupplier { get => _priceListDeleteSupplier; set => SetProperty(ref _priceListDeleteSupplier, value); }
     public Category? SelectedCategoryFilter { get => _selectedCategoryFilter; set => SetProperty(ref _selectedCategoryFilter, value); }
     public Supplier? SelectedSupplierFilter { get => _selectedSupplierFilter; set => SetProperty(ref _selectedSupplierFilter, value); }
     public string InventorySearchText { get => _inventorySearchText; set => SetProperty(ref _inventorySearchText, value); }
@@ -1166,14 +1170,40 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private async Task DeletePriceListItemAsync()
+    private async Task DeletePriceListItemAsync(PriceListItem? item)
     {
-        if (PriceListItem is null || PriceListItem.Id == 0) return;
-        if (MessageBox.Show($"Delete price-list item '{PriceListItem.ReferenceNumber} - {PriceListItem.ProductName}'?", "Confirm price-list deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        await _priceList.DeleteAsync(PriceListItem.Id);
+        if (item is null || item.Id == 0) return;
+        if (MessageBox.Show($"Delete price-list item '{item.ReferenceNumber} - {item.ProductName}'?", "Confirm price-list deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        await _priceList.DeleteAsync(item.Id);
         PriceListItem = null;
         await RefreshPriceListAsync();
-        StatusMessage = "Price-list item deleted. Store / Inventory was not changed.";
+        StatusMessage = $"Price-list item {item.ReferenceNumber} deleted.";
+    }
+
+    private async Task DeleteSupplierPriceListAsync()
+    {
+        var supplier = PriceListDeleteSupplier;
+        if (supplier is null || supplier.Id == 0)
+        {
+            MessageBox.Show("Select a supplier first.", "Supplier price list", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var count = await _priceList.CountSupplierItemsAsync(supplier.Id);
+        if (count == 0)
+        {
+            StatusMessage = $"No active price-list items belong to {supplier.CompanyName}.";
+            return;
+        }
+
+        var message = $"Delete all {count} price-list item(s) for '{supplier.CompanyName}'?\n\n" +
+                      "Only this supplier's Price List entries will be removed.";
+        if (MessageBox.Show(message, "Confirm supplier price-list deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+
+        var deleted = await _priceList.DeleteSupplierItemsAsync(supplier.Id);
+        PriceListItem = null;
+        await RefreshPriceListAsync();
+        StatusMessage = $"Deleted {deleted} price-list item(s) for {supplier.CompanyName}.";
     }
 
     private async Task RefreshPriceListAsync(string? searchText = null)

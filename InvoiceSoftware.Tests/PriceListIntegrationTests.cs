@@ -103,6 +103,58 @@ public sealed class PriceListIntegrationTests
         Assert.Empty(await fixture.Db.PriceListItems.ToListAsync());
     }
 
+    [Fact]
+    public async Task Deleting_one_item_does_not_remove_other_price_list_or_inventory_items()
+    {
+        await using var fixture = await PriceListFixture.CreateAsync();
+        var originalInventoryCount = await fixture.Db.Products.CountAsync();
+        var first = await fixture.Service.SaveAsync(new PriceListItem
+        {
+            ReferenceNumber = "DELETE-ONE", ProductName = "First", SellingPrice = 10m
+        });
+        await fixture.Service.SaveAsync(new PriceListItem
+        {
+            ReferenceNumber = "KEEP-ONE", ProductName = "Second", SellingPrice = 20m
+        });
+
+        await fixture.Service.DeleteAsync(first.Id);
+
+        Assert.Equal(["KEEP-ONE"], (await fixture.Service.SearchAsync()).Select(x => x.ReferenceNumber).ToArray());
+        Assert.True((await fixture.Db.PriceListItems.IgnoreQueryFilters().SingleAsync(x => x.Id == first.Id)).IsDeleted);
+        Assert.Equal(originalInventoryCount, await fixture.Db.Products.CountAsync());
+    }
+
+    [Fact]
+    public async Task Deleting_a_supplier_list_removes_only_that_suppliers_price_list_entries()
+    {
+        await using var fixture = await PriceListFixture.CreateAsync();
+        var originalInventoryCount = await fixture.Db.Products.CountAsync();
+        var supplier = new Supplier { CompanyName = "Supplier A", IsActive = true };
+        var otherSupplier = new Supplier { CompanyName = "Supplier B", IsActive = true };
+        fixture.Db.Suppliers.AddRange(supplier, otherSupplier);
+        await fixture.Db.SaveChangesAsync();
+        foreach (var index in Enumerable.Range(1, 120))
+        {
+            fixture.Db.PriceListItems.Add(new PriceListItem
+            {
+                ReferenceNumber = $"A-{index:000}", ProductName = $"A item {index}",
+                SellingPrice = index, SupplierId = supplier.Id
+            });
+        }
+        fixture.Db.PriceListItems.AddRange(
+            new PriceListItem { ReferenceNumber = "B-1", ProductName = "B item", SellingPrice = 5m, SupplierId = otherSupplier.Id },
+            new PriceListItem { ReferenceNumber = "MANUAL-1", ProductName = "Manual item", SellingPrice = 6m });
+        await fixture.Db.SaveChangesAsync();
+
+        Assert.Equal(120, await fixture.Service.CountSupplierItemsAsync(supplier.Id));
+        Assert.Equal(120, await fixture.Service.DeleteSupplierItemsAsync(supplier.Id));
+        Assert.Equal(0, await fixture.Service.CountSupplierItemsAsync(supplier.Id));
+        Assert.Equal(0, await fixture.Service.DeleteSupplierItemsAsync(supplier.Id));
+        Assert.Equal(["B-1", "MANUAL-1"], (await fixture.Service.SearchAsync()).Select(x => x.ReferenceNumber).ToArray());
+        Assert.Equal(122, await fixture.Db.PriceListItems.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(originalInventoryCount, await fixture.Db.Products.CountAsync());
+    }
+
     private sealed class PriceListFixture : IAsyncDisposable
     {
         private readonly SqliteConnection connection;

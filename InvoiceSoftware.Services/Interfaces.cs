@@ -73,6 +73,8 @@ public interface IPriceListService
     Task<List<PriceListItem>> SearchAsync(string? text = null, CancellationToken cancellationToken = default);
     Task<PriceListItem> SaveAsync(PriceListItem item, CancellationToken cancellationToken = default);
     Task DeleteAsync(int itemId, CancellationToken cancellationToken = default);
+    Task<int> CountSupplierItemsAsync(int supplierId, CancellationToken cancellationToken = default);
+    Task<int> DeleteSupplierItemsAsync(int supplierId, CancellationToken cancellationToken = default);
     Task ExportExcelAsync(string filePath, IEnumerable<PriceListItem> items, CancellationToken cancellationToken = default);
     Task<int> ImportExcelAsync(string filePath, CancellationToken cancellationToken = default);
     string CopyImage(string sourcePath, string referenceNumber);

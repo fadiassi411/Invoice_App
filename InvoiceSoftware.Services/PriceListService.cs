@@ -72,6 +72,22 @@ public sealed class PriceListService : IPriceListService
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public Task<int> CountSupplierItemsAsync(int supplierId, CancellationToken cancellationToken = default)
+    {
+        if (supplierId <= 0) throw new ArgumentOutOfRangeException(nameof(supplierId));
+        return db.PriceListItems.CountAsync(x => x.SupplierId == supplierId, cancellationToken);
+    }
+
+    public Task<int> DeleteSupplierItemsAsync(int supplierId, CancellationToken cancellationToken = default)
+    {
+        if (supplierId <= 0) throw new ArgumentOutOfRangeException(nameof(supplierId));
+        var deletedAt = DateTime.UtcNow;
+        return db.PriceListItems.Where(x => x.SupplierId == supplierId)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(x => x.IsDeleted, true)
+                .SetProperty(x => x.DeletedAt, deletedAt), cancellationToken);
+    }
+
     public Task ExportExcelAsync(string filePath, IEnumerable<PriceListItem> items, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

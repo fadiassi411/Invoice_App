@@ -81,7 +81,9 @@ The **Store / Inventory** workspace manages products, categories, suppliers, sto
 
 The **Price List** page is an independent customer-facing catalogue. Its entries are stored separately from **Store / Inventory**, so adding, editing, importing, or deleting price-list rows never creates a stock product or changes inventory quantities, costs, invoices, or quotations. It exports a formatted `.xlsx` workbook with embedded available images. Item images selected in the app or imported from the app's portable workbook are copied to `%LOCALAPPDATA%\InvoiceSoftware\Assets\PriceListImages`.
 
-Version 1.4 adds an intelligent supplier importer for `.xlsx` and legacy `.xls` files. Version 1.4.1 improves large-list import and display performance:
+Version 1.4 adds an intelligent supplier importer for `.xlsx` and legacy `.xls` files. Version 1.4.1 improves large-list import and display performance. Version 1.4.2 adds a delete button to each item row and a separate supplier-list delete control. Select a supplier, click **Delete Supplier List**, and confirm the number of items shown. Only entries linked to that supplier are removed from the visible Price List; manually created entries and other suppliers' entries remain.
+
+To import:
 
 1. Select the supplier and Excel file.
 2. The app detects possible worksheets, tables, and header rows even when titles, blank rows, or repeated headers are present.

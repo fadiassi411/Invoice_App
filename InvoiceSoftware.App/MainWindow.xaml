@@ -998,10 +998,17 @@
                                 <WrapPanel>
                                     <Button Content="New Item" Command="{Binding NewPriceListItemCommand}" />
                                     <Button Content="Save Item" Command="{Binding SavePriceListItemCommand}" />
-                                    <Button Content="Delete Item" Command="{Binding DeletePriceListItemCommand}" Background="#C92A2A" />
+                                    <Button Content="Delete Selected Item" Command="{Binding DeletePriceListItemCommand}" CommandParameter="{Binding PriceListItem}" Background="#C92A2A" ToolTip="Delete the selected Price List item" />
                                     <Button Content="Export Excel" Command="{Binding ExportPriceListExcelCommand}" ToolTip="Exports the visible active price list, including available product images" />
                                     <Button Content="Import Supplier Excel" Command="{Binding ImportPriceListExcelCommand}" ToolTip="Detects and validates .xlsx/.xls supplier price lists before a confirmed import; inventory remains unchanged" />
                                     <Button Content="Refresh" Command="{Binding RefreshPriceListCommand}" />
+                                </WrapPanel>
+                                <WrapPanel Margin="0,12,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="Delete a supplier's Price List:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding PriceListDeleteSupplier}" DisplayMemberPath="CompanyName"
+                                              Width="230" Margin="0,0,8,0" ToolTip="Choose the supplier whose Price List entries should be deleted" />
+                                    <Button Content="Delete Supplier List" Command="{Binding DeleteSupplierPriceListCommand}" Background="#A31D1D"
+                                            ToolTip="Delete all Price List entries for the chosen supplier after confirmation" />
                                 </WrapPanel>
                             </StackPanel>
                         </Border>
@@ -1024,6 +1031,15 @@
                                     <DataGridTextColumn Header="Supplier" Binding="{Binding Supplier.CompanyName}" Width="140" />
                                     <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100" />
                                     <DataGridTextColumn Header="Tax %" Binding="{Binding TaxRate, StringFormat=N2}" Width="75" />
+                                    <DataGridTemplateColumn Header="Action" Width="90">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="Delete" Background="#C92A2A" Padding="8,4" Margin="3"
+                                                        Command="{Binding DataContext.DeletePriceListItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}" ToolTip="Delete this Price List item" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Border>
