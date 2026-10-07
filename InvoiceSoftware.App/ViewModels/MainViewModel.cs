@@ -42,6 +42,7 @@ public sealed class MainViewModel : ObservableObject
     private DashboardSnapshot? _snapshot;
     private Product? _inventoryProduct;
     private PriceListItem? _priceListItem;
+    private ObservableCollection<PriceListItem> _priceListItems = [];
     private Category? _selectedCategoryFilter;
     private Supplier? _selectedSupplierFilter;
     private string _inventorySearchText = "";
@@ -82,7 +83,6 @@ public sealed class MainViewModel : ObservableObject
         Invoices = [];
         Receipts = [];
         InventoryProducts = [];
-        PriceListItems = [];
         Categories = [];
         Suppliers = [];
         StockMovements = [];
@@ -154,7 +154,11 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<InvoiceItem> InvoiceItems { get; }
     public ObservableCollection<Receipt> Receipts { get; }
     public ObservableCollection<Product> InventoryProducts { get; }
-    public ObservableCollection<PriceListItem> PriceListItems { get; }
+    public ObservableCollection<PriceListItem> PriceListItems
+    {
+        get => _priceListItems;
+        private set => SetProperty(ref _priceListItems, value);
+    }
     public ObservableCollection<Category> Categories { get; }
     public ObservableCollection<Supplier> Suppliers { get; }
     public ObservableCollection<StockMovement> StockMovements { get; }
@@ -217,7 +221,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ExportProfitReportCommand { get; }
     public ICommand ActivateLicenseCommand { get; }
 
-    public string ApplicationVersion => "1.4.0";
+    public string ApplicationVersion => "1.4.1";
     public string InstallationId => _licenseService.InstallationId;
     public string LicenseStatus => _licenseStatus.IsLicensed ? "Licensed" : "Not licensed";
     public string LicenseCustomer => _licenseStatus.CustomerName ?? "-";
@@ -1175,7 +1179,9 @@ public sealed class MainViewModel : ObservableObject
     private async Task RefreshPriceListAsync(string? searchText = null)
     {
         var selectedId = PriceListItem?.Id;
-        await Replace(PriceListItems, await _priceList.SearchAsync(searchText));
+        // Replace the collection in one notification. Adding thousands of imported
+        // rows individually forces WPF to repeatedly refresh the grid.
+        PriceListItems = new ObservableCollection<PriceListItem>(await _priceList.SearchAsync(searchText));
         PriceListItem = selectedId is null ? PriceListItems.FirstOrDefault() : PriceListItems.FirstOrDefault(x => x.Id == selectedId);
         StatusMessage = $"{PriceListItems.Count} independent price-list item(s) found.";
     }

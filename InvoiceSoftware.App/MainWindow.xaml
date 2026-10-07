@@ -1006,7 +1006,10 @@
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}">
-                            <DataGrid ItemsSource="{Binding PriceListItems}" SelectedItem="{Binding PriceListItem}" IsReadOnly="True" AutoGenerateColumns="False" MinHeight="290" CanUserSortColumns="True">
+                            <DataGrid ItemsSource="{Binding PriceListItems}" SelectedItem="{Binding PriceListItem}" IsReadOnly="True" AutoGenerateColumns="False"
+                                      Height="420" CanUserSortColumns="True" EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                      ScrollViewer.CanContentScroll="True">
                                 <DataGrid.Columns>
                                     <DataGridTemplateColumn Header="Image" Width="76">
                                         <DataGridTemplateColumn.CellTemplate><DataTemplate><Border Width="50" Height="50" Background="#F1F5F9" CornerRadius="5" ClipToBounds="True"><Image Source="{Binding ImagePath}" Stretch="UniformToFill" /></Border></DataTemplate></DataGridTemplateColumn.CellTemplate>

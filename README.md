@@ -77,11 +77,11 @@ The current version includes a working local database, sample company/customer/p
 
 The **Store / Inventory** workspace manages products, categories, suppliers, stock adjustments, CSV import/export, printable product lists, and the permanent stock-movement ledger. Product selection in invoice entry searches reference numbers, barcodes, names, and descriptions. Saving an invoice finalizes it and synchronizes stock transactionally; later edits apply only the quantity difference, while cancellation or deletion restores stock. Services and products with stock tracking disabled never affect inventory. The **Inventory Reports** workspace provides current-stock, low-stock, sales, revenue, cost, gross-profit, and margin reporting with CSV export.
 
-## Price List And Supplier Excel Import (v1.4.0)
+## Price List And Supplier Excel Import (v1.4.x)
 
 The **Price List** page is an independent customer-facing catalogue. Its entries are stored separately from **Store / Inventory**, so adding, editing, importing, or deleting price-list rows never creates a stock product or changes inventory quantities, costs, invoices, or quotations. It exports a formatted `.xlsx` workbook with embedded available images. Item images selected in the app or imported from the app's portable workbook are copied to `%LOCALAPPDATA%\InvoiceSoftware\Assets\PriceListImages`.
 
-Version 1.4.0 adds an intelligent supplier importer for `.xlsx` and legacy `.xls` files:
+Version 1.4 adds an intelligent supplier importer for `.xlsx` and legacy `.xls` files. Version 1.4.1 improves large-list import and display performance:
 
 1. Select the supplier and Excel file.
 2. The app detects possible worksheets, tables, and header rows even when titles, blank rows, or repeated headers are present.

@@ -4,6 +4,8 @@ using InvoiceSoftware.Data;
 using InvoiceSoftware.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Data.Common;
 
 namespace InvoiceSoftware.Tests;
 
@@ -236,6 +238,27 @@ public sealed class SupplierPriceListImportTests
         Assert.Empty(await fixture.Db.PriceListItems.ToListAsync());
     }
 
+    [Fact]
+    public async Task Large_import_revalidates_in_bulk_instead_of_querying_each_record()
+    {
+        var counter = new SelectCommandCounter();
+        await using var fixture = await ImportFixture.CreateAsync(counter);
+        var file = fixture.PathFor("large-list.xlsx");
+        var rows = Enumerable.Range(1, 500)
+            .Select(index => new object?[] { $"ITEM-{index:000000}", $"Item {index}", index + 0.125m })
+            .ToArray();
+        CreateWorkbook(file, ["Reference", "Description", "Price"], rows);
+        var analysis = await fixture.Service.AnalyzeAsync(file, fixture.Supplier.Id);
+        var preview = await fixture.Service.BuildPreviewAsync(file, fixture.Supplier.Id, Mapping(analysis.Candidates.First()));
+
+        counter.Reset();
+        var result = await fixture.Service.ImportAsync(preview, false);
+
+        Assert.Equal(500, result.Created);
+        Assert.Equal(500, await fixture.Db.PriceListItems.CountAsync());
+        Assert.True(counter.SelectCount <= 4, $"Expected at most 4 SELECT commands during import, but observed {counter.SelectCount}.");
+    }
+
     private static PriceListImportMapping Mapping(PriceListTableCandidate candidate, ExistingItemMode existing = ExistingItemMode.CreateOnly)
     {
         var columns = candidate.SuggestedMappings.ToDictionary(x => x.Key, x => x.Value);
@@ -279,13 +302,15 @@ public sealed class SupplierPriceListImportTests
             Service = new SupplierPriceListImportService(db);
         }
 
-        public static async Task<ImportFixture> CreateAsync()
+        public static async Task<ImportFixture> CreateAsync(DbCommandInterceptor? interceptor = null)
         {
             var folder = Path.Combine(Path.GetTempPath(), $"supplier-price-list-{Guid.NewGuid():N}");
             Directory.CreateDirectory(folder);
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
-            var db = new InvoiceDbContext(new DbContextOptionsBuilder<InvoiceDbContext>().UseSqlite(connection).Options);
+            var options = new DbContextOptionsBuilder<InvoiceDbContext>().UseSqlite(connection);
+            if (interceptor is not null) options.AddInterceptors(interceptor);
+            var db = new InvoiceDbContext(options.Options);
             await db.Database.EnsureCreatedAsync();
             var supplier = new Supplier { CompanyName = "Test Supplier", IsActive = true };
             db.Suppliers.Add(supplier);
@@ -300,6 +325,23 @@ public sealed class SupplierPriceListImportTests
             await Db.DisposeAsync();
             await connection.DisposeAsync();
             if (Directory.Exists(Folder)) Directory.Delete(Folder, true);
+        }
+    }
+
+    private sealed class SelectCommandCounter : DbCommandInterceptor
+    {
+        public int SelectCount { get; private set; }
+
+        public void Reset() => SelectCount = 0;
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) SelectCount++;
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
         }
     }
 }

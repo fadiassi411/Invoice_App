@@ -262,6 +262,11 @@ public sealed class SupplierPriceListImportService : ISupplierPriceListImportSer
         {
             var supplier = await db.Suppliers.SingleOrDefaultAsync(x => x.Id == preview.SupplierId, cancellationToken)
                 ?? throw new InvalidOperationException("The selected supplier no longer exists.");
+            // Revalidate the preview with one database read. Querying once per row makes
+            // large supplier lists progressively slower and holds the UI open much longer.
+            var currentItems = await db.PriceListItems.IgnoreQueryFilters().ToListAsync(cancellationToken);
+            var currentByReference = currentItems.ToDictionary(x => x.ReferenceNumber, StringComparer.OrdinalIgnoreCase);
+            var newItems = new List<PriceListItem>();
             var created = 0;
             var updated = 0;
             foreach (var record in importable)
@@ -270,16 +275,17 @@ public sealed class SupplierPriceListImportService : ISupplierPriceListImportSer
                 PriceListItem item;
                 if (record.Action == ImportRecordAction.Update)
                 {
-                    item = await db.PriceListItems.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.Id == record.ExistingItemId, cancellationToken)
-                        ?? throw new DbUpdateConcurrencyException($"Price-list item '{record.ReferenceNumber}' was changed or removed after preview.");
+                    if (!currentByReference.TryGetValue(record.ReferenceNumber, out item!) || item.Id != record.ExistingItemId)
+                        throw new DbUpdateConcurrencyException($"Price-list item '{record.ReferenceNumber}' was changed or removed after preview.");
                     updated++;
                 }
                 else
                 {
-                    var nowExists = await db.PriceListItems.IgnoreQueryFilters().AnyAsync(x => x.ReferenceNumber.ToLower() == record.ReferenceNumber.ToLower(), cancellationToken);
-                    if (nowExists) throw new DbUpdateConcurrencyException($"Price-list item '{record.ReferenceNumber}' was added after preview. Regenerate the preview.");
+                    if (currentByReference.ContainsKey(record.ReferenceNumber))
+                        throw new DbUpdateConcurrencyException($"Price-list item '{record.ReferenceNumber}' was added after preview. Regenerate the preview.");
                     item = new PriceListItem { ReferenceNumber = record.ReferenceNumber };
-                    db.PriceListItems.Add(item);
+                    currentByReference.Add(record.ReferenceNumber, item);
+                    newItems.Add(item);
                     created++;
                 }
 
@@ -298,6 +304,7 @@ public sealed class SupplierPriceListImportService : ISupplierPriceListImportSer
                 if (preview.Mapping.Columns.ContainsKey(PriceListImportField.TaxRate) && record.TaxRate.HasValue) item.TaxRate = record.TaxRate.Value;
             }
 
+            if (newItems.Count > 0) db.PriceListItems.AddRange(newItems);
             await SaveMappingAsync(preview, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
