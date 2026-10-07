@@ -27,6 +27,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IBackupService _backup;
     private readonly IInventoryService _inventory;
     private readonly IPriceListService _priceList;
+    private readonly ISupplierPriceListImportService _supplierPriceListImport;
     private readonly IInvoicePdfService _pdf;
     private readonly IInvoiceLicenseService _licenseService;
 
@@ -56,7 +57,7 @@ public sealed class MainViewModel : ObservableObject
     private DateTime? _reportTo = DateTime.Today;
     private InvoiceLicenseStatus _licenseStatus;
 
-    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory, IPriceListService priceList, QuotationWorkspaceViewModel quotations, IInvoiceLicenseService licenseService)
+    public MainViewModel(ILookupService lookup, IInvoiceService invoices, IReceiptService receipts, IDashboardService dashboard, IBackupService backup, IInvoicePdfService pdf, IInventoryService inventory, IPriceListService priceList, ISupplierPriceListImportService supplierPriceListImport, QuotationWorkspaceViewModel quotations, IInvoiceLicenseService licenseService)
     {
         _lookup = lookup;
         _invoices = invoices;
@@ -66,6 +67,7 @@ public sealed class MainViewModel : ObservableObject
         _pdf = pdf;
         _inventory = inventory;
         _priceList = priceList;
+        _supplierPriceListImport = supplierPriceListImport;
         _licenseService = licenseService;
         _licenseStatus = licenseService.GetStatus();
         Quotations = quotations;
@@ -215,7 +217,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ExportProfitReportCommand { get; }
     public ICommand ActivateLicenseCommand { get; }
 
-    public string ApplicationVersion => "1.3.0";
+    public string ApplicationVersion => "1.4.0";
     public string InstallationId => _licenseService.InstallationId;
     public string LicenseStatus => _licenseStatus.IsLicensed ? "Licensed" : "Not licensed";
     public string LicenseCustomer => _licenseStatus.CustomerName ?? "-";
@@ -1198,11 +1200,21 @@ public sealed class MainViewModel : ObservableObject
     {
         try
         {
-            var dialog = new OpenFileDialog { Filter = "Excel workbook (*.xlsx)|*.xlsx" };
+            var dialog = new OpenFileDialog { Filter = "Excel workbooks (*.xlsx;*.xls)|*.xlsx;*.xls" };
             if (dialog.ShowDialog() != true) return;
-            var imported = await _priceList.ImportExcelAsync(dialog.FileName);
+            if (Suppliers.Count == 0) await Replace(Suppliers, await _inventory.GetSuppliersAsync());
+            if (Suppliers.Count == 0)
+            {
+                MessageBox.Show("Create a supplier in Store / Inventory before importing a supplier price list.", "Supplier required", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var window = new SupplierPriceListImportWindow(_supplierPriceListImport, Suppliers, dialog.FileName)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            if (window.ShowDialog() != true || window.Result is null) return;
             await RefreshPriceListAsync();
-            StatusMessage = $"Imported {imported} independent price-list item(s). Store / Inventory was not changed.";
+            StatusMessage = $"Imported {window.Result.Imported} supplier price-list item(s); {window.Result.Skipped} skipped. Store / Inventory was not changed.";
         }
         catch (Exception ex)
         {

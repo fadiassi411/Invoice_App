@@ -912,6 +912,9 @@ namespace InvoiceSoftware.Data.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Currency")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("TEXT");
 
@@ -946,6 +949,9 @@ namespace InvoiceSoftware.Data.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("TaxRate")
                         .HasPrecision(18, 4)
                         .HasColumnType("TEXT");
@@ -960,6 +966,8 @@ namespace InvoiceSoftware.Data.Migrations
 
                     b.HasIndex("ReferenceNumber")
                         .IsUnique();
+
+                    b.HasIndex("SupplierId");
 
                     b.ToTable("PriceListItems");
                 });
@@ -1352,14 +1360,14 @@ namespace InvoiceSoftware.Data.Migrations
                     b.Property<string>("BrandSnapshot")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("CostPriceSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedBy")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal?>("CostPriceSnapshot")
-                        .HasPrecision(18, 4)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -1757,6 +1765,60 @@ namespace InvoiceSoftware.Data.Migrations
                     b.ToTable("Suppliers");
                 });
 
+            modelBuilder.Entity("InvoiceSoftware.Core.Models.SupplierPriceListMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ColumnMappingsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HeaderNamesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HeaderRowNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParsingSettingsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SheetName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId")
+                        .IsUnique();
+
+                    b.ToTable("SupplierPriceListMappings");
+                });
+
             modelBuilder.Entity("InvoiceSoftware.Core.Models.Unit", b =>
                 {
                     b.Property<int>("Id")
@@ -1895,6 +1957,16 @@ namespace InvoiceSoftware.Data.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("InvoiceSoftware.Core.Models.PriceListItem", b =>
+                {
+                    b.HasOne("InvoiceSoftware.Core.Models.Supplier", "Supplier")
+                        .WithMany("PriceListItems")
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Supplier");
+                });
+
             modelBuilder.Entity("InvoiceSoftware.Core.Models.Product", b =>
                 {
                     b.HasOne("InvoiceSoftware.Core.Models.Category", "CategoryRecord")
@@ -2013,6 +2085,17 @@ namespace InvoiceSoftware.Data.Migrations
                     b.Navigation("RelatedInvoice");
                 });
 
+            modelBuilder.Entity("InvoiceSoftware.Core.Models.SupplierPriceListMapping", b =>
+                {
+                    b.HasOne("InvoiceSoftware.Core.Models.Supplier", "Supplier")
+                        .WithOne("PriceListMapping")
+                        .HasForeignKey("InvoiceSoftware.Core.Models.SupplierPriceListMapping", "SupplierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
+                });
+
             modelBuilder.Entity("InvoiceSoftware.Core.Models.Category", b =>
                 {
                     b.Navigation("Products");
@@ -2048,6 +2131,10 @@ namespace InvoiceSoftware.Data.Migrations
 
             modelBuilder.Entity("InvoiceSoftware.Core.Models.Supplier", b =>
                 {
+                    b.Navigation("PriceListItems");
+
+                    b.Navigation("PriceListMapping");
+
                     b.Navigation("Products");
                 });
 #pragma warning restore 612, 618

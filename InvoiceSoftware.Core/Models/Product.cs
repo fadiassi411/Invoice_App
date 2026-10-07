@@ -19,6 +19,8 @@ public sealed class Supplier : BaseEntity
     public string? Notes { get; set; }
     public bool IsActive { get; set; } = true;
     public List<Product> Products { get; set; } = [];
+    public List<PriceListItem> PriceListItems { get; set; } = [];
+    public SupplierPriceListMapping? PriceListMapping { get; set; }
 }
 
 public sealed class Unit : BaseEntity

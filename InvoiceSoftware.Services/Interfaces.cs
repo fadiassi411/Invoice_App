@@ -78,6 +78,14 @@ public interface IPriceListService
     string CopyImage(string sourcePath, string referenceNumber);
 }
 
+public interface ISupplierPriceListImportService
+{
+    Task<PriceListWorkbookAnalysis> AnalyzeAsync(string filePath, int supplierId, CancellationToken cancellationToken = default);
+    Task<PriceListImportPreview> BuildPreviewAsync(string filePath, int supplierId, PriceListImportMapping mapping, CancellationToken cancellationToken = default);
+    Task<PriceListImportResult> ImportAsync(PriceListImportPreview preview, bool importValidRecordsOnly, CancellationToken cancellationToken = default);
+    Task ResetSavedMappingAsync(int supplierId, CancellationToken cancellationToken = default);
+}
+
 public interface IDashboardService
 {
     Task<DashboardSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default);

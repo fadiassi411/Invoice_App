@@ -10,6 +10,7 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
+    public DbSet<SupplierPriceListMapping> SupplierPriceListMappings => Set<SupplierPriceListMapping>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
@@ -45,6 +46,8 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
         modelBuilder.Entity<Product>().HasIndex(x => x.Category);
         modelBuilder.Entity<PriceListItem>().HasIndex(x => x.ReferenceNumber).IsUnique();
         modelBuilder.Entity<PriceListItem>().HasIndex(x => x.ProductName);
+        modelBuilder.Entity<PriceListItem>().HasIndex(x => x.SupplierId);
+        modelBuilder.Entity<SupplierPriceListMapping>().HasIndex(x => x.SupplierId).IsUnique();
         modelBuilder.Entity<Category>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<Supplier>().HasIndex(x => x.CompanyName);
         modelBuilder.Entity<StockMovement>().HasIndex(x => new { x.ProductId, x.TransactionDate });
@@ -80,6 +83,18 @@ public sealed class InvoiceDbContext(DbContextOptions<InvoiceDbContext> options)
             .WithMany(x => x.Products)
             .HasForeignKey(x => x.SupplierId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<PriceListItem>()
+            .HasOne(x => x.Supplier)
+            .WithMany(x => x.PriceListItems)
+            .HasForeignKey(x => x.SupplierId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<SupplierPriceListMapping>()
+            .HasOne(x => x.Supplier)
+            .WithOne(x => x.PriceListMapping)
+            .HasForeignKey<SupplierPriceListMapping>(x => x.SupplierId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<InvoiceItem>()
             .HasOne(x => x.Product)

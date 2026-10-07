@@ -16,6 +16,7 @@ public static class ServiceRegistration
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IPriceListService, PriceListService>();
+        services.AddScoped<ISupplierPriceListImportService, SupplierPriceListImportService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IBackupService, BackupService>();
         return services;

@@ -25,12 +25,12 @@ public sealed class PriceListService : IPriceListService
     private static readonly string[] Headers =
     [
         "Image", "ReferenceNumber", "ProductName", "Description", "Category",
-        "Brand", "Unit", "SellingPrice", "TaxRate", "ImagePath"
+        "Brand", "Unit", "SellingPrice", "Currency", "TaxRate", "Supplier", "ImagePath"
     ];
 
     public Task<List<PriceListItem>> SearchAsync(string? text = null, CancellationToken cancellationToken = default)
     {
-        var query = db.PriceListItems.AsNoTracking().Where(x => x.IsActive);
+        var query = db.PriceListItems.AsNoTracking().Include(x => x.Supplier).Where(x => x.IsActive);
         if (!string.IsNullOrWhiteSpace(text))
         {
             var pattern = $"%{text.Trim()}%";
@@ -100,8 +100,10 @@ public sealed class PriceListService : IPriceListService
             sheet.Cell(row, 6).Value = item.Brand ?? "";
             sheet.Cell(row, 7).Value = item.Unit;
             sheet.Cell(row, 8).Value = item.SellingPrice;
-            sheet.Cell(row, 9).Value = item.TaxRate;
-            sheet.Cell(row, 10).Value = item.ImagePath ?? "";
+            sheet.Cell(row, 9).Value = item.Currency ?? "";
+            sheet.Cell(row, 10).Value = item.TaxRate;
+            sheet.Cell(row, 11).Value = item.Supplier?.CompanyName ?? "";
+            sheet.Cell(row, 12).Value = item.ImagePath ?? "";
             if (!string.IsNullOrWhiteSpace(item.ImagePath) && File.Exists(item.ImagePath))
                 sheet.AddPicture(item.ImagePath).MoveTo(sheet.Cell(row, 1)).WithSize(42, 42);
             row++;
@@ -116,9 +118,11 @@ public sealed class PriceListService : IPriceListService
         sheet.Column(7).Width = 12;
         sheet.Column(8).Width = 15;
         sheet.Column(9).Width = 12;
-        sheet.Column(10).Hide();
+        sheet.Column(10).Width = 12;
+        sheet.Column(11).Width = 24;
+        sheet.Column(12).Hide();
         sheet.Column(8).Style.NumberFormat.Format = "#,##0.00";
-        sheet.Column(9).Style.NumberFormat.Format = "0.00";
+        sheet.Column(10).Style.NumberFormat.Format = "0.00";
         sheet.RangeUsed()?.SetAutoFilter();
 
         var directory = Path.GetDirectoryName(filePath);
@@ -184,6 +188,7 @@ public sealed class PriceListService : IPriceListService
                 item.Brand = NullIfWhiteSpace(Text(row, header, "Brand"));
                 item.Unit = NullIfWhiteSpace(Text(row, header, "Unit")) ?? "Piece";
                 item.SellingPrice = sellingPrice;
+                item.Currency = NullIfWhiteSpace(Text(row, header, "Currency"));
                 item.TaxRate = taxRate;
 
                 var imagePath = Text(row, header, "ImagePath");

@@ -1000,7 +1000,7 @@
                                     <Button Content="Save Item" Command="{Binding SavePriceListItemCommand}" />
                                     <Button Content="Delete Item" Command="{Binding DeletePriceListItemCommand}" Background="#C92A2A" />
                                     <Button Content="Export Excel" Command="{Binding ExportPriceListExcelCommand}" ToolTip="Exports the visible active price list, including available product images" />
-                                    <Button Content="Import Excel" Command="{Binding ImportPriceListExcelCommand}" ToolTip="Imports independent price-list entries by reference number; inventory remains unchanged" />
+                                    <Button Content="Import Supplier Excel" Command="{Binding ImportPriceListExcelCommand}" ToolTip="Detects and validates .xlsx/.xls supplier price lists before a confirmed import; inventory remains unchanged" />
                                     <Button Content="Refresh" Command="{Binding RefreshPriceListCommand}" />
                                 </WrapPanel>
                             </StackPanel>
@@ -1017,6 +1017,8 @@
                                     <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="125" />
                                     <DataGridTextColumn Header="Brand" Binding="{Binding Brand}" Width="110" />
                                     <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="75" />
+                                    <DataGridTextColumn Header="Currency" Binding="{Binding Currency}" Width="75" />
+                                    <DataGridTextColumn Header="Supplier" Binding="{Binding Supplier.CompanyName}" Width="140" />
                                     <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100" />
                                     <DataGridTextColumn Header="Tax %" Binding="{Binding TaxRate, StringFormat=N2}" Width="75" />
                                 </DataGrid.Columns>

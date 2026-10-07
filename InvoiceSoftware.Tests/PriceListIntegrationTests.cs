@@ -57,12 +57,12 @@ public sealed class PriceListIntegrationTests
             Assert.Equal("PL-100", sheet.Cell(2, 2).GetString());
             Assert.Equal(45.75m, sheet.Cell(2, 8).GetValue<decimal>());
             Assert.Single(sheet.Pictures);
-            Assert.True(sheet.Column(10).IsHidden);
+            Assert.True(sheet.Column(12).IsHidden);
 
             sheet.Cell(2, 2).Value = "PL-200";
             sheet.Cell(2, 3).Value = "Imported sensor";
             sheet.Cell(2, 8).Value = 52.50m;
-            sheet.Cell(2, 10).Clear(); // Force the portable embedded image path.
+            sheet.Cell(2, 12).Clear(); // Force the portable embedded image path.
             workbook.Save();
         }
 

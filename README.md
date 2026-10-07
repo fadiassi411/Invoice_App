@@ -77,9 +77,23 @@ The current version includes a working local database, sample company/customer/p
 
 The **Store / Inventory** workspace manages products, categories, suppliers, stock adjustments, CSV import/export, printable product lists, and the permanent stock-movement ledger. Product selection in invoice entry searches reference numbers, barcodes, names, and descriptions. Saving an invoice finalizes it and synchronizes stock transactionally; later edits apply only the quantity difference, while cancellation or deletion restores stock. Services and products with stock tracking disabled never affect inventory. The **Inventory Reports** workspace provides current-stock, low-stock, sales, revenue, cost, gross-profit, and margin reporting with CSV export.
 
-## Price List (v1.3.0)
+## Price List And Supplier Excel Import (v1.4.0)
 
-The **Price List** page is an independent customer-facing catalogue. Its entries are stored separately from **Store / Inventory**, so adding, editing, importing, or deleting price-list rows never creates a stock product or changes inventory quantities, costs, invoices, or quotations. It exports a formatted `.xlsx` workbook with embedded available images and imports the same portable workbook format. Imports match price-list entries by `ReferenceNumber`; unmatched references create new price-list entries only. Required Excel columns are `ReferenceNumber`, `ProductName`, and `SellingPrice`; category, brand, unit, description, and tax rate are optional. Item images selected in the app or imported from embedded Excel pictures are copied to `%LOCALAPPDATA%\InvoiceSoftware\Assets\PriceListImages`.
+The **Price List** page is an independent customer-facing catalogue. Its entries are stored separately from **Store / Inventory**, so adding, editing, importing, or deleting price-list rows never creates a stock product or changes inventory quantities, costs, invoices, or quotations. It exports a formatted `.xlsx` workbook with embedded available images. Item images selected in the app or imported from the app's portable workbook are copied to `%LOCALAPPDATA%\InvoiceSoftware\Assets\PriceListImages`.
+
+Version 1.4.0 adds an intelligent supplier importer for `.xlsx` and legacy `.xls` files:
+
+1. Select the supplier and Excel file.
+2. The app detects possible worksheets, tables, and header rows even when titles, blank rows, or repeated headers are present.
+3. Confirm the mappings for item number, description/name, price, currency, and optional supported fields. Multiple price columns are never selected silently.
+4. Review every proposed create, update, warning, and error with its source sheet, Excel row, and original value.
+5. Confirm the import. All database changes run in one transaction; a failure rolls back the whole import.
+
+Item numbers remain text, including letters, hyphens, long identifiers, and leading zeros represented by Excel number formatting. Missing or invalid prices are never replaced with zero. Ambiguous decimal/thousands separators require an explicit parsing choice. Existing references require an explicit **Create only**, **Update matching**, or **Skip matching** rule. **Import valid records only** is also an explicit choice; skipped rows remain visible in the completion summary.
+
+Confirmed mappings are saved per supplier by header name, not column position, so reordered columns can be reused. Each new file is revalidated. If the sheet layout changes or a required header disappears, the app asks for a new confirmation. Saved mappings can be edited through the mapping controls or reset from the importer.
+
+Migration `AddSupplierPriceListImport` adds supplier/currency metadata to independent price-list records and stores supplier mapping profiles. Existing price-list, invoice, quotation, inventory, database, and license data are preserved.
 
 Migration `AddStoreInventoryManagement` creates the normalized inventory schema. `BackfillLegacyInventoryData` preserves existing products, derives product names and stock-tracking behavior, links matching legacy categories, and records opening stock balances. Application startup applies both migrations automatically, including after an older backup is restored.
 

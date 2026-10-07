@@ -1,0 +1,114 @@
+<Window x:Class="InvoiceSoftware.App.SupplierPriceListImportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Supplier price-list import" Width="1180" Height="820"
+        MinWidth="980" MinHeight="680" WindowStartupLocation="CenterOwner"
+        Background="#F4F7FB" FontFamily="Segoe UI">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#1E83C6"/><Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/><Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="TextBox"><Setter Property="Padding" Value="7"/><Setter Property="Margin" Value="0,3,10,8"/></Style>
+        <Style TargetType="ComboBox"><Setter Property="Padding" Value="6"/><Setter Property="Margin" Value="0,3,10,8"/></Style>
+        <Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/></Style>
+    </Window.Resources>
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Import supplier price list" FontSize="25" FontWeight="SemiBold" Foreground="#123B6D"/>
+            <TextBlock Text="Select supplier and file → detect and map → preview and validate → confirm import. Store / Inventory is never changed."
+                       Foreground="#52667D" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="White" BorderBrush="#D8E3F0" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0"><TextBlock Text="Supplier *"/><ComboBox x:Name="SupplierCombo" DisplayMemberPath="CompanyName" SelectionChanged="SupplierCombo_SelectionChanged"/></StackPanel>
+                <StackPanel Grid.Column="1"><TextBlock Text="Excel file (.xlsx or .xls) *"/><TextBox x:Name="FilePathText" IsReadOnly="True"/></StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                    <Button Content="Browse" Click="Browse_Click"/><Button Content="Detect" Click="Detect_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#D8E3F0" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0"><TextBlock Text="Detected worksheet / table"/><ComboBox x:Name="CandidateCombo" SelectionChanged="CandidateCombo_SelectionChanged"/></StackPanel>
+                    <Button Grid.Column="1" Content="Reset saved mapping" Click="ResetMapping_Click" VerticalAlignment="Bottom" Margin="0,0,0,8" Background="#52667D"/>
+                </Grid>
+                <TextBlock x:Name="DetectionMessage" Foreground="#52667D" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Grid.Column="0"><TextBlock Text="Item number *"/><ComboBox x:Name="ItemNumberCombo"/></StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="1"><TextBlock Text="Description"/><ComboBox x:Name="DescriptionCombo"/></StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="2"><TextBlock Text="Product name"/><ComboBox x:Name="ProductNameCombo"/></StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="3"><TextBlock Text="Price *"/><ComboBox x:Name="PriceCombo"/></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="0"><TextBlock Text="Currency"/><ComboBox x:Name="CurrencyCombo"/></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock Text="Category"/><ComboBox x:Name="CategoryCombo"/></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="2"><TextBlock Text="Brand / manufacturer"/><ComboBox x:Name="BrandCombo"/></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="3"><TextBlock Text="Unit"/><ComboBox x:Name="UnitCombo"/></StackPanel>
+                    <StackPanel Grid.Row="2" Grid.Column="0"><TextBlock Text="Tax rate %"/><ComboBox x:Name="TaxRateCombo"/></StackPanel>
+                    <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock Text="Decimal separator"/><ComboBox x:Name="DecimalSeparatorCombo"/></StackPanel>
+                    <StackPanel Grid.Row="2" Grid.Column="2"><TextBlock Text="Existing references"/><ComboBox x:Name="ExistingItemsCombo"/></StackPanel>
+                    <Button Grid.Row="2" Grid.Column="3" Content="Generate preview" Click="Preview_Click" VerticalAlignment="Bottom" Margin="0,0,10,8"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="3" Background="#EAF6FD" BorderBrush="#73C7EF" BorderThickness="1" CornerRadius="7" Padding="10" Margin="0,0,0,8">
+            <TextBlock x:Name="SummaryText" Text="No preview generated." Foreground="#173B5F" FontWeight="SemiBold"/>
+        </Border>
+
+        <TabControl Grid.Row="4" x:Name="PreviewTabs">
+            <TabItem Header="Records">
+                <DataGrid x:Name="RecordsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Sheet" Binding="{Binding SheetName}" Width="100"/>
+                        <DataGridTextColumn Header="Excel row" Binding="{Binding ExcelRowNumber}" Width="75"/>
+                        <DataGridTextColumn Header="Item number" Binding="{Binding ReferenceNumber}" Width="130"/>
+                        <DataGridTextColumn Header="Description / name" Binding="{Binding ProductName}" Width="220"/>
+                        <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=N4}" Width="95"/>
+                        <DataGridTextColumn Header="Currency" Binding="{Binding Currency}" Width="75"/>
+                        <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="80"/>
+                        <DataGridTextColumn Header="Issues" Binding="{Binding IssueSummary}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="Issues">
+                <DataGrid x:Name="IssuesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="75"/>
+                        <DataGridTextColumn Header="Sheet" Binding="{Binding SheetName}" Width="100"/>
+                        <DataGridTextColumn Header="Excel row" Binding="{Binding ExcelRowNumber}" Width="75"/>
+                        <DataGridTextColumn Header="Field" Binding="{Binding Field}" Width="110"/>
+                        <DataGridTextColumn Header="Original value" Binding="{Binding OriginalValue}" Width="160"/>
+                        <DataGridTextColumn Header="Explanation" Binding="{Binding Message}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+        </TabControl>
+
+        <Grid Grid.Row="5" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <CheckBox x:Name="ImportValidOnlyCheck" Content="Import valid records only and report every skipped record"/>
+                <TextBlock Text="The original Excel file is read-only. Nothing is written to the database until Import is confirmed." Foreground="#52667D" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Cancel" Click="Cancel_Click" Background="#52667D"/>
+                <Button Content="Import" Click="Import_Click" Background="#14836D" Margin="0"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
