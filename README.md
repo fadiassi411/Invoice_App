@@ -109,6 +109,8 @@ The **Quotations** workspace creates searchable, revision-controlled quotations 
 
 In v1.5.2, the Quotations list has labeled filters and three dropdowns: **List** (Search Quotations, Export CSV), **Quotation** (New, Open / Modify, Duplicate, Create Revision), and **Workflow** (Convert to Invoice, Archive, Delete Permanently). Select a quotation row before using actions for an existing quotation. Press Enter in the search box to apply the filters quickly.
 
+In v1.5.3, the duplicate **New Invoice** and **New Quotation** buttons have been removed from the upper-right header; use the **Quick Create** buttons in the left sidebar. Quotation PDFs now print **Terms and conditions:** with the same labeled text styling and font size as the other Commercial Terms entries.
+
 To remove an erroneous quotation in v1.2.2 or later, select its row in **Quotations** and choose **Workflow → Delete Permanently**. If it was archived already, tick **Include archived** and choose **List → Search Quotations** first. This removes only the selected revision, its items, and its status history; it cannot be undone and its number is not reused. Delete later revisions first. A quotation linked to an invoice cannot be deleted. Use **Workflow → Archive** instead when you need to hide a quotation while retaining its history.
 
 In the quotation editor, enable **PDF: show total price only** to omit line prices and the subtotal breakdown from the customer-facing PDF while retaining the grand total. Tick **Hide in PDF** on an individual row to omit that row from the PDF. Hidden rows remain saved and still contribute to the quotation total; these settings carry forward when duplicating or revising a quotation.

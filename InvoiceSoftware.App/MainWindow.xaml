@@ -426,8 +426,6 @@
                         </TextBox.InputBindings>
                     </TextBox>
                     <Button Content="Search" Command="{Binding SearchCommand}" ToolTip="{Binding GlobalSearchHint}" />
-                    <Button Content="New Invoice" Command="{Binding NewInvoiceCommand}" />
-                    <Button Content="New Quotation" Command="{Binding Quotations.NewCommand}" />
                 </StackPanel>
                 <TextBlock Text="{Binding SelectedSection}" FontSize="26" FontWeight="SemiBold" Foreground="#0D2B68" VerticalAlignment="Center" />
             </DockPanel>

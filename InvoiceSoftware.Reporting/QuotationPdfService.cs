@@ -251,7 +251,7 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 });
             });
             if (!string.IsNullOrWhiteSpace(quotation.TermsAndConditions))
-                column.Item().PaddingTop(7).Text(quotation.TermsAndConditions);
+                column.Item().PaddingTop(7).Column(terms => Term(terms, "Terms and conditions", quotation.TermsAndConditions));
         });
     }
 

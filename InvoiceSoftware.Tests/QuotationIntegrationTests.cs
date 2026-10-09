@@ -376,7 +376,11 @@ public sealed class QuotationIntegrationTests
     private static Quotation QuoteForPdf(int count) => new()
     {
         QuotationNumber = "QUO-2026-000001", RevisionNumber = 0, CustomerNameSnapshot = "Example Customer", CurrencyCode = "USD",
-        ProjectName = "Control System Upgrade", Subject = "Equipment and engineering quotation", PaymentTerms = "30 days", DeliveryPeriod = "4 weeks", Warranty = "12 months",
+        ProjectName = "Control System Upgrade", Subject = "Equipment and engineering quotation",
+        PaymentTerms = "80% advance upon order confirmation and 20% upon delivery, unless otherwise agreed in writing.", DeliveryPeriod = "4 weeks",
+        DeliveryTerms = "Delivery date and location will be confirmed after order acceptance, subject to material availability. Installation and commissioning are included only if listed.",
+        Warranty = "One year from delivery or completed installation, as applicable. Covers defects under normal use; excludes misuse, accidental damage, and unauthorized modifications.",
+        TermsAndConditions = "Any changes or additional work require written agreement and may affect the price and delivery date.",
         Items = Enumerable.Range(1, count).Select(i => new QuotationItem { LineNumber = i, DisplayOrder = i, DescriptionSnapshot = $"Professional multiline quotation item {i} with technical details and specifications", ItemReferenceSnapshot = $"PART-{i:000}", Quantity = 1 + i % 3, UnitSnapshot = "ea", UnitPrice = 10 + i, TaxPercentage = i % 2 == 0 ? 5 : 10 }).ToList()
     };
 
