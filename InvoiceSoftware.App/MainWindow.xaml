@@ -995,23 +995,52 @@
                     <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibility}, ConverterParameter=Price List}">
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
-                                <TextBlock Text="Price List" FontSize="24" FontWeight="SemiBold" Foreground="#18314F" />
+                                <TextBlock Text="Price List workspace" FontSize="24" FontWeight="SemiBold" Foreground="#18314F" />
                                 <TextBlock Text="Maintain a customer-facing catalogue that is completely separate from Store / Inventory. Imports and edits here never change stock products or quantities." Foreground="#52667D" Margin="0,5,0,10" TextWrapping="Wrap" />
-                                <WrapPanel>
-                                    <Button Content="New Item" Command="{Binding NewPriceListItemCommand}" />
-                                    <Button Content="Save Item" Command="{Binding SavePriceListItemCommand}" />
-                                    <Button Content="Delete Selected Item" Command="{Binding DeletePriceListItemCommand}" CommandParameter="{Binding PriceListItem}" Background="#C92A2A" ToolTip="Delete the selected Price List item" />
-                                    <Button Content="Export Excel" Command="{Binding ExportPriceListExcelCommand}" ToolTip="Exports the visible active price list, including available product images" />
-                                    <Button Content="Import Supplier Excel" Command="{Binding ImportPriceListExcelCommand}" ToolTip="Detects and validates .xlsx/.xls supplier price lists before a confirmed import; inventory remains unchanged" />
-                                    <Button Content="Refresh" Command="{Binding RefreshPriceListCommand}" />
-                                </WrapPanel>
-                                <WrapPanel Margin="0,12,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="Delete a supplier's Price List:" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding PriceListDeleteSupplier}" DisplayMemberPath="CompanyName"
-                                              Width="230" Margin="0,0,8,0" ToolTip="Choose the supplier whose Price List entries should be deleted" />
-                                    <Button Content="Delete Supplier List" Command="{Binding DeleteSupplierPriceListCommand}" Background="#A31D1D"
-                                            ToolTip="Delete all Price List entries for the chosen supplier after confirmation" />
-                                </WrapPanel>
+                                <Border Background="#F4F8FD" BorderBrush="#D7E3F1" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                    <WrapPanel VerticalAlignment="Center">
+                                        <TextBlock Text="ACTIONS" Foreground="#52667D" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                        <Button Content="Item  ▾" MinWidth="108" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Create, save, or delete the selected catalogue item">
+                                            <Button.ContextMenu>
+                                                <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                    <MenuItem Header="New Item" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.NewPriceListItemCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Save Item" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.SavePriceListItemCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <Separator Margin="5,4" />
+                                                    <MenuItem Header="Delete Selected Item" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.DeletePriceListItemCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.PriceListItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                        <Button Content="Excel  ▾" MinWidth="108" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Import a supplier price list or export this catalogue">
+                                            <Button.ContextMenu>
+                                                <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                    <MenuItem Header="Import Supplier Excel" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ImportPriceListExcelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" ToolTip="Detect and validate .xlsx/.xls files before importing; inventory remains unchanged" />
+                                                    <MenuItem Header="Export Excel" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ExportPriceListExcelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" ToolTip="Export active price-list items and available images" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                        <Button Content="View  ▾" MinWidth="108" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Refresh the displayed price list">
+                                            <Button.ContextMenu>
+                                                <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                    <MenuItem Header="Refresh Price List" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.RefreshPriceListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                    </WrapPanel>
+                                </Border>
+                                <Border Background="#F4F8FD" BorderBrush="#D7E3F1" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,10,0,0">
+                                    <WrapPanel VerticalAlignment="Center">
+                                        <TextBlock Text="SUPPLIER LIST" Foreground="#52667D" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                        <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding PriceListDeleteSupplier}" DisplayMemberPath="CompanyName"
+                                                  Width="230" Margin="0,0,8,0" ToolTip="Choose the supplier whose Price List entries should be deleted" />
+                                        <Button Content="Supplier actions  ▾" MinWidth="155" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Manage the chosen supplier's price list">
+                                            <Button.ContextMenu>
+                                                <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                    <MenuItem Header="Delete Supplier List" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.DeleteSupplierPriceListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" ToolTip="Delete all price-list entries for the chosen supplier after confirmation" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                    </WrapPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}">
@@ -1033,12 +1062,20 @@
                                     <DataGridTextColumn Header="Supplier" Binding="{Binding Supplier.CompanyName}" Width="140" />
                                     <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100" />
                                     <DataGridTextColumn Header="Tax %" Binding="{Binding TaxRate, StringFormat=N2}" Width="75" />
-                                    <DataGridTemplateColumn Header="Action" Width="90">
+                                    <DataGridTemplateColumn Header="Actions" Width="110">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Button Content="Delete" Background="#C92A2A" Padding="8,4" Margin="3"
-                                                        Command="{Binding DataContext.DeletePriceListItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                        CommandParameter="{Binding}" ToolTip="Delete this Price List item" />
+                                                <Button Content="Item actions  ▾" Padding="8,4" Margin="3"
+                                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        Click="InvoiceActionsButton_Click" ToolTip="Actions for this price-list item">
+                                                    <Button.ContextMenu>
+                                                        <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                            <MenuItem Header="Delete This Item" Style="{StaticResource InvoiceDeleteMenuItem}"
+                                                                      Command="{Binding PlacementTarget.Tag.DeletePriceListItemCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                        </ContextMenu>
+                                                    </Button.ContextMenu>
+                                                </Button>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
@@ -1051,8 +1088,14 @@
                                 <StackPanel>
                                     <TextBlock Text="Optional image" FontSize="17" FontWeight="SemiBold" />
                                     <Border Width="142" Height="142" Margin="0,8,0,8" HorizontalAlignment="Left" Background="#F1F5F9" CornerRadius="8" ClipToBounds="True"><Image Source="{Binding PriceListItem.ImagePath}" Stretch="UniformToFill" /></Border>
-                                    <Button Content="Choose Image" Command="{Binding ChoosePriceListImageCommand}" HorizontalAlignment="Left" />
-                                    <Button Content="Remove Image" Command="{Binding ClearPriceListImageCommand}" HorizontalAlignment="Left" />
+                                    <Button Content="Image actions  ▾" MinWidth="142" HorizontalAlignment="Left" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Choose or remove this item's image">
+                                        <Button.ContextMenu>
+                                            <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                <MenuItem Header="Choose Image" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ChoosePriceListImageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Remove Image" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.ClearPriceListImageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
                                 </StackPanel>
                                 <Grid Grid.Column="1" Margin="12,0,0,0">
                                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
