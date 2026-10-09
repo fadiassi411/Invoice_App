@@ -925,19 +925,56 @@
                         </WrapPanel>
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
-                                <TextBlock Text="Search and filter quotations" FontSize="17" FontWeight="SemiBold" />
+                                <TextBlock Text="Search and filter quotations" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8" />
                                 <WrapPanel>
-                                    <TextBox Width="220" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Quotation number, customer, project, subject, or customer reference" />
-                                    <ComboBox Width="180" ItemsSource="{Binding Customers}" SelectedItem="{Binding FilterCustomer}" DisplayMemberPath="Name" ToolTip="Customer" />
-                                    <DatePicker Width="125" SelectedDate="{Binding FilterFrom}" ToolTip="From date" />
-                                    <DatePicker Width="125" SelectedDate="{Binding FilterTo}" ToolTip="To date" />
-                                    <ComboBox Width="145" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding FilterStatus}" ToolTip="Status" />
-                                    <ComboBox Width="120" ItemsSource="{Binding ValidityFilters}" SelectedItem="{Binding FilterValidity}" ToolTip="Validity" />
-                                    <CheckBox Content="Include archived" IsChecked="{Binding IncludeArchived}" VerticalAlignment="Center" Margin="6,0,10,0" />
-                                    <Button Content="Search" Command="{Binding SearchCommand}" />
-                                    <Button Content="New Quotation" Command="{Binding NewCommand}" />
-                                    <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" />
+                                    <StackPanel Margin="0,0,10,8">
+                                        <TextBlock Text="Search text" Foreground="#52667D" Margin="0,0,0,3" />
+                                        <TextBox Width="220" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Quotation number, customer, project, subject, or customer reference">
+                                            <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SearchCommand}" /></TextBox.InputBindings>
+                                        </TextBox>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,8"><TextBlock Text="Customer" Foreground="#52667D" Margin="0,0,0,3" /><ComboBox Width="180" ItemsSource="{Binding Customers}" SelectedItem="{Binding FilterCustomer}" DisplayMemberPath="Name" /></StackPanel>
+                                    <StackPanel Margin="0,0,10,8"><TextBlock Text="From date" Foreground="#52667D" Margin="0,0,0,3" /><DatePicker Width="125" SelectedDate="{Binding FilterFrom}" /></StackPanel>
+                                    <StackPanel Margin="0,0,10,8"><TextBlock Text="To date" Foreground="#52667D" Margin="0,0,0,3" /><DatePicker Width="125" SelectedDate="{Binding FilterTo}" /></StackPanel>
+                                    <StackPanel Margin="0,0,10,8"><TextBlock Text="Status" Foreground="#52667D" Margin="0,0,0,3" /><ComboBox Width="145" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding FilterStatus}" /></StackPanel>
+                                    <StackPanel Margin="0,0,10,8"><TextBlock Text="Validity" Foreground="#52667D" Margin="0,0,0,3" /><ComboBox Width="120" ItemsSource="{Binding ValidityFilters}" SelectedItem="{Binding FilterValidity}" /></StackPanel>
+                                    <CheckBox Content="Include archived" IsChecked="{Binding IncludeArchived}" VerticalAlignment="Bottom" Margin="0,0,0,17" />
                                 </WrapPanel>
+                                <Border Background="#F4F8FD" BorderBrush="#D7E3F1" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,4,0,0">
+                                    <WrapPanel VerticalAlignment="Center">
+                                        <TextBlock Text="ACTIONS" Foreground="#52667D" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                        <Button Content="List  ▾" MinWidth="108" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Search with the selected filters or export quotations">
+                                            <Button.ContextMenu>
+                                                <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                    <MenuItem Header="Search Quotations" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.SearchCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Export CSV" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ExportCsvCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                        <Button Content="Quotation  ▾" MinWidth="125" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Create or work with the selected quotation">
+                                            <Button.ContextMenu>
+                                                <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                    <MenuItem Header="New Quotation" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.NewCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <Separator Margin="5,4" />
+                                                    <MenuItem Header="Open / Modify" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Duplicate" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.DuplicateCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Create Revision" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.CreateRevisionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                        <Button Content="Workflow  ▾" MinWidth="120" Tag="{Binding}" Click="InvoiceActionsButton_Click" ToolTip="Convert, archive, or delete the selected quotation">
+                                            <Button.ContextMenu>
+                                                <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
+                                                    <MenuItem Header="Convert to Invoice" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ConvertToInvoiceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <Separator Margin="5,4" />
+                                                    <MenuItem Header="Archive" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.ArchiveCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Delete Permanently" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                        <TextBlock Text="Select a quotation below for Quotation and Workflow actions." Foreground="#52667D" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                    </WrapPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}">
@@ -961,15 +998,7 @@
                                         <DataGridTextColumn Header="Last Modified" Binding="{Binding ModifiedAt, StringFormat=g}" Width="130"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <WrapPanel Margin="0,8,0,0">
-                                    <Button Content="Open / Modify" Command="{Binding EditCommand}" CommandParameter="{Binding SelectedQuotation}" />
-                                    <Button Content="Duplicate" Command="{Binding DuplicateCommand}" CommandParameter="{Binding SelectedQuotation}" />
-                                    <Button Content="Create Revision" Command="{Binding CreateRevisionCommand}" CommandParameter="{Binding SelectedQuotation}" />
-                                    <Button Content="Convert to Invoice" Command="{Binding ConvertToInvoiceCommand}" CommandParameter="{Binding SelectedQuotation}" Background="#1E7480" />
-                                    <Button Content="Archive" Command="{Binding ArchiveCommand}" CommandParameter="{Binding SelectedQuotation}" Background="#B91C1C" />
-                                    <Button Content="Delete Permanently" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedQuotation}" Background="#8B1A1A" />
-                                </WrapPanel>
-                                <TextBlock Text="{Binding StatusMessage}" Foreground="#17365D" Margin="0,6,0,0" />
+                                <TextBlock Text="{Binding StatusMessage}" Foreground="#17365D" Margin="0,8,0,0" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
