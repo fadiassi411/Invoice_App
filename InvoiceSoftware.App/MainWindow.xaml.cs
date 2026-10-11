@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.ComponentModel;
+using InvoiceSoftware.Core.Models;
 using InvoiceSoftware.App.ViewModels;
 
 namespace InvoiceSoftware.App;
@@ -35,6 +36,11 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(() =>
         {
+            if (e.Column.Header?.ToString() == "Price" && e.Row.Item is InvoiceItem item)
+            {
+                item.UnitPrice = Math.Round(item.UnitPrice, 2, MidpointRounding.AwayFromZero);
+                if (sender is DataGrid grid) grid.Items.Refresh();
+            }
             if (DataContext is MainViewModel viewModel)
                 viewModel.RecalculateInvoiceProfit();
         });

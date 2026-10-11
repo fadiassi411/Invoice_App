@@ -30,7 +30,7 @@ public sealed class InventoryIntegrationTests
 
         Assert.Equal("0007-A", stored.Items.Single().ProductReferenceSnapshot);
         Assert.Equal("Original details", stored.Items.Single().Description);
-        Assert.Equal(42.125m, stored.Items.Single().UnitPrice);
+        Assert.Equal(42.13m, stored.Items.Single().UnitPrice);
         Assert.Null(stored.Items.Single().ProductId);
         Assert.Equal(10m, await fixture.QuantityAsync(stock.Id));
         Assert.False(await fixture.Db.StockMovements.AnyAsync(x => x.RelatedInvoiceId == invoice.Id));

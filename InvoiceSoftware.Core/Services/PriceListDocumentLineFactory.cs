@@ -16,7 +16,7 @@ public static class PriceListDocumentLineFactory
             Description = Description(source),
             Unit = source.Unit,
             Quantity = 1m,
-            UnitPrice = source.SellingPrice,
+            UnitPrice = Math.Round(source.SellingPrice, 2, MidpointRounding.AwayFromZero),
             CostPriceSnapshot = 0m,
             TaxPercentage = source.TaxRate
         };

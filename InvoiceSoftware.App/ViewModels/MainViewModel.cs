@@ -552,7 +552,7 @@ public sealed class MainViewModel : ObservableObject
             Description = product?.Description ?? "Custom item",
             Unit = product?.Unit ?? "ea",
             Quantity = 1,
-            UnitPrice = product?.SellingPrice ?? 0,
+            UnitPrice = Math.Round(product?.SellingPrice ?? 0m, 2, MidpointRounding.AwayFromZero),
             CostPriceSnapshot = product?.CostPrice ?? 0,
             TaxPercentage = product?.TaxPercentage ?? Company.DefaultTaxPercentage
         };

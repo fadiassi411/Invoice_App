@@ -22,7 +22,7 @@ public sealed class PriceListDocumentLineTests
         Assert.Null(invoice.ProductId);
         Assert.Equal("00001234-A", invoice.ProductReferenceSnapshot);
         Assert.Equal("Breaker 20A", invoice.Description);
-        Assert.Equal(19.335m, invoice.UnitPrice);
+        Assert.Equal(19.34m, invoice.UnitPrice);
         Assert.Equal(6m, invoice.TaxPercentage);
         Assert.Null(quotation.StockItemId);
         Assert.Equal(QuotationItemType.ManualItem, quotation.ItemType);
@@ -45,5 +45,20 @@ public sealed class PriceListDocumentLineTests
 
         source.IsActive = false;
         Assert.Throws<InvalidOperationException>(() => PriceListDocumentLineFactory.ForQuotation(source, "USD", 1, acceptUnspecifiedCurrency: true));
+    }
+
+    [Fact]
+    public void Invoice_price_is_rounded_to_two_decimals_without_changing_the_catalogue()
+    {
+        var source = new PriceListItem
+        {
+            ReferenceNumber = "1050243", ProductName = "Operating shaft", Currency = "USD",
+            SellingPrice = 42.5699850173145m
+        };
+
+        var invoiceLine = PriceListDocumentLineFactory.ForInvoice(source, "USD", 1);
+
+        Assert.Equal(42.57m, invoiceLine.UnitPrice);
+        Assert.Equal(42.5699850173145m, source.SellingPrice);
     }
 }

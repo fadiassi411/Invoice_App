@@ -575,7 +575,7 @@
                                         <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" />
                                         <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="70" />
                                         <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="70" />
-                                        <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice}" Width="90" />
+                                        <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="90" />
                                         <DataGridTextColumn Header="Service % of items incl. tax" Binding="{Binding ServicePercentage, UpdateSourceTrigger=PropertyChanged}" Width="145" />
                                         <DataGridTextColumn Header="Unit cost (internal)" Binding="{Binding CostPriceSnapshot, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="135" />
                                         <DataGridTextColumn Header="Disc %" Binding="{Binding DiscountPercentage}" Width="80" />
