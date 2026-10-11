@@ -278,6 +278,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 table.ColumnsDefinition(cols =>
                 {
                     cols.ConstantColumn(28);
+                    cols.ConstantColumn(74);
                     cols.RelativeColumn(4);
                     cols.ConstantColumn(44);
                     cols.ConstantColumn(58);
@@ -289,6 +290,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 table.Header(header =>
                 {
                     HeaderCell(header, "#");
+                    HeaderCell(header, "REFERENCE");
                     HeaderCell(header, "DESCRIPTION");
                     HeaderCell(header, "QTY");
                     HeaderCell(header, "UNIT PRICE");
@@ -302,7 +304,10 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 {
                     var bg = index++ % 2 == 0 ? "#f1f1f1" : "#ffffff";
                     BodyCell(table, item.SortOrder.ToString(), bg);
-                    BodyCell(table, item.Description, bg);
+                    BodyCell(table, item.ProductReferenceSnapshot ?? item.Product?.Code ?? "", bg);
+                    BodyCell(table, item.ServicePercentage is null
+                        ? item.Description
+                        : $"{item.Description} ({item.ServicePercentage:0.####}% of other items incl. tax)", bg);
                     BodyCell(table, item.Quantity.ToString("N2"), bg);
                     BodyCell(table, item.UnitPrice.ToString("N2"), bg);
                     BodyCell(table, item.LineDiscount.ToString("N2"), bg);

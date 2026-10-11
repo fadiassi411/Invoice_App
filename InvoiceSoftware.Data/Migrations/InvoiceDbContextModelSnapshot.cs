@@ -802,6 +802,10 @@ namespace InvoiceSoftware.Data.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("ServicePercentage")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
 
@@ -1443,6 +1447,10 @@ namespace InvoiceSoftware.Data.Migrations
 
                     b.Property<int>("QuotationId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("ServicePercentage")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("StockItemId")
                         .HasColumnType("INTEGER");

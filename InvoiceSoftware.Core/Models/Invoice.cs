@@ -56,6 +56,9 @@ public sealed class InvoiceItem : BaseEntity
     public decimal Quantity { get; set; } = 1m;
     public string Unit { get; set; } = "ea";
     public decimal UnitPrice { get; set; }
+    // Null keeps the existing fixed-price behavior. A value prices service/labour
+    // against the other items after their line discounts and including tax.
+    public decimal? ServicePercentage { get; set; }
     public decimal CostPriceSnapshot { get; set; }
     public decimal DiscountPercentage { get; set; }
     public decimal TaxPercentage { get; set; }

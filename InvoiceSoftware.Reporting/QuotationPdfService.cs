@@ -8,6 +8,7 @@ namespace InvoiceSoftware.Reporting;
 public interface IQuotationPdfService
 {
     void ExportQuotation(Quotation quotation, CompanySettings company, string filePath);
+    void ExportProforma(Quotation quotation, CompanySettings company, string filePath);
 }
 
 /// <summary>Creates the customer-facing A4 quotation document from persisted snapshots.</summary>
@@ -21,6 +22,12 @@ public sealed class QuotationPdfService : IQuotationPdfService
     public QuotationPdfService() => QuestPDF.Settings.License = LicenseType.Community;
 
     public void ExportQuotation(Quotation quotation, CompanySettings company, string filePath)
+        => ExportDocument(quotation, company, filePath, false);
+
+    public void ExportProforma(Quotation quotation, CompanySettings company, string filePath)
+        => ExportDocument(quotation, company, filePath, true);
+
+    private static void ExportDocument(Quotation quotation, CompanySettings company, string filePath, bool proforma)
     {
         ArgumentNullException.ThrowIfNull(quotation);
         ArgumentNullException.ThrowIfNull(company);
@@ -32,13 +39,13 @@ public sealed class QuotationPdfService : IQuotationPdfService
             page.MarginHorizontal(30);
             page.MarginVertical(26);
             page.DefaultTextStyle(x => x.FontFamily("Segoe UI").FontSize(8.5f).FontColor("#202A35"));
-            page.Header().Element(x => Header(x, quotation, company));
-            page.Content().PaddingTop(14).Element(x => Content(x, quotation, company));
-            page.Footer().Element(x => Footer(x, quotation));
+            page.Header().Element(x => Header(x, quotation, company, proforma));
+            page.Content().PaddingTop(14).Element(x => Content(x, quotation, company, proforma));
+            page.Footer().Element(x => Footer(x, quotation, proforma));
         })).GeneratePdf(filePath);
     }
 
-    private static void Header(IContainer container, Quotation quotation, CompanySettings company)
+    private static void Header(IContainer container, Quotation quotation, CompanySettings company, bool proforma)
     {
         container.Column(column =>
         {
@@ -56,12 +63,12 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 });
                 row.ConstantItem(220).AlignRight().Column(right =>
                 {
-                    right.Item().AlignRight().Text("QUOTATION").FontSize(28).Bold().FontColor(Teal).LetterSpacing(0.08f);
+                    right.Item().AlignRight().Text(proforma ? "PROFORMA INVOICE" : "QUOTATION").FontSize(proforma ? 20 : 28).Bold().FontColor(Teal).LetterSpacing(0.08f);
                     right.Item().AlignRight().Text(quotation.DisplayNumber).FontSize(11).Bold().FontColor(Navy);
                     right.Item().PaddingTop(6).Table(table =>
                     {
                         table.ColumnsDefinition(c => { c.RelativeColumn(); c.ConstantColumn(90); });
-                        Meta(table, "Quotation date", quotation.QuotationDate.ToString("dd MMM yyyy"));
+                        Meta(table, proforma ? "Proforma date" : "Quotation date", quotation.QuotationDate.ToString("dd MMM yyyy"));
                         Meta(table, "Valid until", quotation.ValidUntil.ToString("dd MMM yyyy"));
                         Meta(table, "Currency", quotation.CurrencyCode);
                         Meta(table, "Status", quotation.Status.ToString());
@@ -72,13 +79,13 @@ public sealed class QuotationPdfService : IQuotationPdfService
         });
     }
 
-    private static void Content(IContainer container, Quotation quotation, CompanySettings company)
+    private static void Content(IContainer container, Quotation quotation, CompanySettings company, bool proforma)
     {
         container.Column(column =>
         {
             column.Item().Row(row =>
             {
-                row.RelativeItem().Element(x => InformationCard(x, "QUOTATION TO", new[]
+                row.RelativeItem().Element(x => InformationCard(x, proforma ? "PROFORMA TO" : "QUOTATION TO", new[]
                 {
                     quotation.CustomerCompanySnapshot ?? quotation.CustomerNameSnapshot,
                     quotation.ContactPersonSnapshot is null ? null : $"Attention: {quotation.ContactPersonSnapshot}",
@@ -141,7 +148,7 @@ public sealed class QuotationPdfService : IQuotationPdfService
                     shaded = !shaded;
                     Body(table, (++printedLineNumber).ToString(), background, TextAlign.Center);
                     Body(table, Reference(item), background);
-                    Body(table, Description(item, company.ShowAvailableStockOnPrintedQuotation), background);
+                    Body(table, Description(item, company.ShowAvailableStockOnPrintedQuotation, quotation.HideItemPricesOnPdf), background);
                     Body(table, item.Quantity.ToString("0.####"), background, TextAlign.Right);
                     Body(table, item.UnitSnapshot, background, TextAlign.Center);
                     if (!quotation.HideItemPricesOnPdf)
@@ -188,7 +195,9 @@ public sealed class QuotationPdfService : IQuotationPdfService
             });
 
             column.Item().PaddingTop(16).Element(x => CommercialTerms(x, quotation));
-            column.Item().PaddingTop(10).Text(company.QuotationFooter).Italic().FontColor("#4C5A67");
+            column.Item().PaddingTop(10).Text(proforma
+                ? "This proforma is based on the referenced quotation and remains valid until the indicated date."
+                : company.QuotationFooter).Italic().FontColor("#4C5A67");
             column.Item().PaddingTop(10).Row(row =>
             {
                 row.RelativeItem().Element(x => SignatureBox(x, "PREPARED BY", quotation.Salesperson));
@@ -197,18 +206,20 @@ public sealed class QuotationPdfService : IQuotationPdfService
                 row.ConstantItem(12);
                 row.RelativeItem().Element(x => SignatureBox(x, "CUSTOMER ACCEPTANCE", quotation.CustomerNameSnapshot));
             });
-            column.Item().PaddingTop(5).AlignCenter().Text("This document is a quotation and is not a tax invoice.").Bold().FontColor(Navy);
+            column.Item().PaddingTop(5).AlignCenter().Text(proforma
+                ? "Proforma invoice for reference only. This is not a tax invoice or receipt."
+                : "This document is a quotation and is not a tax invoice.").Bold().FontColor(Navy);
         });
     }
 
-    private static void Footer(IContainer container, Quotation quotation)
+    private static void Footer(IContainer container, Quotation quotation, bool proforma)
     {
         container.Column(column =>
         {
             column.Item().LineHorizontal(1).LineColor("#BCC7CF");
             column.Item().PaddingTop(4).Row(row =>
             {
-                row.RelativeItem().Text($"{quotation.DisplayNumber}  •  Valid until {quotation.ValidUntil:dd MMM yyyy}").FontSize(7).FontColor("#63717D");
+                row.RelativeItem().Text($"{(proforma ? "Proforma from " : "")}{quotation.DisplayNumber}  •  Valid until {quotation.ValidUntil:dd MMM yyyy}").FontSize(7).FontColor("#63717D");
                 row.ConstantItem(90).AlignRight().Text(text =>
                 {
                     text.Span("Page "); text.CurrentPageNumber(); text.Span(" of "); text.TotalPages();
@@ -298,9 +309,11 @@ public sealed class QuotationPdfService : IQuotationPdfService
         column.Item().PaddingBottom(3).Text(text => { text.Span($"{label}: ").SemiBold(); text.Span(value); });
     }
 
-    private static string Description(QuotationItem item, bool showStock)
+    private static string Description(QuotationItem item, bool showStock, bool hidePrices)
     {
-        var details = new List<string> { item.DescriptionSnapshot };
+        var details = new List<string> { item.ServicePercentage is null || hidePrices
+            ? item.DescriptionSnapshot
+            : $"{item.DescriptionSnapshot} ({item.ServicePercentage:0.####}% of other items incl. tax)" };
         if (!string.IsNullOrWhiteSpace(item.Notes)) details.Add(item.Notes);
         if (showStock && item.StockItemId is not null) details.Add($"Available stock at quotation date: {item.AvailableStockSnapshot:0.####}");
         return string.Join("\n", details);

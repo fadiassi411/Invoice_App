@@ -216,6 +216,7 @@ public sealed class QuotationService(
                 Quantity = x.Quantity,
                 Unit = x.UnitSnapshot,
                 UnitPrice = x.UnitPrice,
+                ServicePercentage = x.ServicePercentage,
                 CostPriceSnapshot = x.CostPriceSnapshot ?? 0m,
                 DiscountPercentage = x.GrossAmount == 0 ? 0 : x.DiscountAmount / x.GrossAmount * 100m,
                 TaxPercentage = x.TaxPercentage
@@ -319,7 +320,7 @@ public sealed class QuotationService(
                 ItemReferenceSnapshot = x.ItemReferenceSnapshot, PartNumberSnapshot = x.PartNumberSnapshot, BarcodeSnapshot = x.BarcodeSnapshot,
                 DescriptionSnapshot = x.DescriptionSnapshot, UnitSnapshot = x.UnitSnapshot, BrandSnapshot = x.BrandSnapshot,
                 ManufacturerSnapshot = x.ManufacturerSnapshot, WarrantySnapshot = x.WarrantySnapshot, AvailableStockSnapshot = x.AvailableStockSnapshot,
-                Quantity = x.Quantity, UnitPrice = x.UnitPrice, CostPriceSnapshot = x.CostPriceSnapshot,
+                Quantity = x.Quantity, UnitPrice = x.UnitPrice, ServicePercentage = x.ServicePercentage, CostPriceSnapshot = x.CostPriceSnapshot,
                 DiscountType = x.DiscountType, DiscountPercentage = x.DiscountPercentage,
                 DiscountValue = x.DiscountValue, TaxPercentage = x.TaxPercentage, Notes = x.Notes, HideOnPdf = x.HideOnPdf
             }).ToList()

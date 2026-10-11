@@ -563,6 +563,7 @@
                                         <Button Content="Find Product..." Command="{Binding SelectProductCommand}" ToolTip="Search by reference, barcode, name, or description" />
                                         <Button Content="Find Price List Item..." Command="{Binding SelectPriceListForInvoiceCommand}" ToolTip="Add an independent Price List item without deducting stock" />
                                         <Button Content="Add Custom Row" Command="{Binding AddInvoiceRowCommand}" />
+                                        <Button Content="Add Service / Labour %" Command="{Binding AddInvoiceServiceCommand}" />
                                         <Button Content="Save Invoice" Command="{Binding SaveInvoiceCommand}" />
                                     </StackPanel>
                                     <TextBlock Text="Invoice items" FontSize="18" FontWeight="SemiBold" />
@@ -570,10 +571,12 @@
                                 <DataGrid ItemsSource="{Binding InvoiceItems}" AutoGenerateColumns="False" CellEditEnding="InvoiceItemsGrid_CellEditEnding">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="#" Binding="{Binding SortOrder}" Width="45" />
+                                        <DataGridTextColumn Header="Reference" Binding="{Binding ProductReferenceSnapshot}" Width="100" />
                                         <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" />
                                         <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="70" />
                                         <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="70" />
                                         <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice}" Width="90" />
+                                        <DataGridTextColumn Header="Service % of items incl. tax" Binding="{Binding ServicePercentage, UpdateSourceTrigger=PropertyChanged}" Width="145" />
                                         <DataGridTextColumn Header="Unit cost (internal)" Binding="{Binding CostPriceSnapshot, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="135" />
                                         <DataGridTextColumn Header="Disc %" Binding="{Binding DiscountPercentage}" Width="80" />
                                         <DataGridTextColumn Header="Tax %" Binding="{Binding TaxPercentage}" Width="80" />
@@ -694,6 +697,7 @@
                                                     <MenuItem Header="Preview Quotation" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.PreviewCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                     <MenuItem Header="Print Quotation" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.PrintCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                     <MenuItem Header="Export PDF" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ExportPdfCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Export Proforma Invoice PDF" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ExportProformaCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.CurrentQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                 </ContextMenu>
                                             </Button.ContextMenu>
                                         </Button>
@@ -795,6 +799,7 @@
                                         <DataGridTextColumn Header="Unit" Binding="{Binding UnitSnapshot, UpdateSourceTrigger=PropertyChanged}" Width="55" />
                                         <DataGridTextColumn Header="Available" Binding="{Binding AvailableStockSnapshot, StringFormat={}{0:0.####}}" IsReadOnly="True" Width="75" />
                                         <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="82" />
+                                        <DataGridTextColumn Header="Service % of items incl. tax" Binding="{Binding ServicePercentage, UpdateSourceTrigger=PropertyChanged}" Width="145" />
                                         <DataGridTextColumn Header="Unit cost (internal)" Binding="{Binding CostPriceSnapshot, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="135" />
                                         <DataGridTemplateColumn Header="Disc. Type" Width="110">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -964,6 +969,7 @@
                                             <Button.ContextMenu>
                                                 <ContextMenu Style="{StaticResource InvoiceActionsMenu}" Opened="InvoiceActionsMenu_Opened" Closed="InvoiceActionsMenu_Closed">
                                                     <MenuItem Header="Convert to Invoice" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ConvertToInvoiceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Export Proforma Invoice PDF" Style="{StaticResource InvoiceActionMenuItem}" Command="{Binding PlacementTarget.Tag.ExportProformaCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                     <Separator Margin="5,4" />
                                                     <MenuItem Header="Archive" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.ArchiveCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                                                     <MenuItem Header="Delete Permanently" Style="{StaticResource InvoiceDeleteMenuItem}" Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.Tag.SelectedQuotation, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />

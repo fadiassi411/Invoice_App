@@ -76,6 +76,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
         ApplyCustomerCommand = new RelayCommand(ApplyCustomerAsync);
         ChangeStatusCommand = new RelayCommand<QuotationStatus>(ChangeStatusAsync);
         ConvertToInvoiceCommand = new RelayCommand<Quotation>(ConvertToInvoiceAsync);
+        ExportProformaCommand = new RelayCommand<Quotation>(ExportProformaAsync);
         ExportCsvCommand = new RelayCommand(ExportCsvAsync);
         CloseEditorCommand = new RelayCommand(CloseEditorAsync);
     }
@@ -115,6 +116,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     public ICommand ApplyCustomerCommand { get; }
     public ICommand ChangeStatusCommand { get; }
     public ICommand ConvertToInvoiceCommand { get; }
+    public ICommand ExportProformaCommand { get; }
     public ICommand ExportCsvCommand { get; }
     public ICommand CloseEditorCommand { get; }
 
@@ -378,7 +380,7 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
     }
 
     private Task AddManualItemAsync() { EnsureCurrent(); AddLine(new QuotationItem { ItemType = QuotationItemType.ManualItem, DescriptionSnapshot = "Custom item", UnitSnapshot = "ea", Quantity = 1, TaxPercentage = Company.DefaultTaxPercentage }); return Task.CompletedTask; }
-    private Task AddServiceAsync() { EnsureCurrent(); AddLine(new QuotationItem { ItemType = QuotationItemType.Service, DescriptionSnapshot = "Service / labour", UnitSnapshot = "hr", Quantity = 1, TaxPercentage = Company.DefaultTaxPercentage }); return Task.CompletedTask; }
+    private Task AddServiceAsync() { EnsureCurrent(); AddLine(new QuotationItem { ItemType = QuotationItemType.Service, DescriptionSnapshot = "Service / labour", UnitSnapshot = "%", Quantity = 1, ServicePercentage = 0m, TaxPercentage = Company.DefaultTaxPercentage }); StatusMessage = "Enter the service percentage of the other items including tax."; return Task.CompletedTask; }
     private Task AddSectionAsync() { EnsureCurrent(); AddLine(new QuotationItem { ItemType = QuotationItemType.SectionHeader, DescriptionSnapshot = "Section heading", Quantity = 0, UnitSnapshot = "" }); return Task.CompletedTask; }
 
     private Task DuplicateLineAsync(QuotationItem? source)
@@ -391,9 +393,10 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
             PartNumberSnapshot = source.PartNumberSnapshot, BarcodeSnapshot = source.BarcodeSnapshot, DescriptionSnapshot = source.DescriptionSnapshot,
             UnitSnapshot = source.UnitSnapshot, BrandSnapshot = source.BrandSnapshot, ManufacturerSnapshot = source.ManufacturerSnapshot,
             WarrantySnapshot = source.WarrantySnapshot, AvailableStockSnapshot = source.AvailableStockSnapshot, Quantity = source.Quantity,
-            UnitPrice = source.UnitPrice, CostPriceSnapshot = source.CostPriceSnapshot,
+            UnitPrice = source.UnitPrice, ServicePercentage = source.ServicePercentage, CostPriceSnapshot = source.CostPriceSnapshot,
             DiscountType = source.DiscountType, DiscountValue = source.DiscountValue,
-            DiscountPercentage = source.DiscountPercentage, TaxPercentage = source.TaxPercentage, Notes = source.Notes
+            DiscountPercentage = source.DiscountPercentage, TaxPercentage = source.TaxPercentage, Notes = source.Notes,
+            HideOnPdf = source.HideOnPdf
         });
         return Task.CompletedTask;
     }
@@ -437,6 +440,27 @@ public sealed class QuotationWorkspaceViewModel : ObservableObject
         StatusMessage = $"Created invoice {invoice.ReferenceNumber}.";
         if (MessageBox.Show($"Invoice {invoice.ReferenceNumber} was created. Open it now?", "Conversion complete", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
             OpenInvoiceRequested?.Invoke(invoice);
+    }
+
+    private async Task ExportProformaAsync(Quotation? quotation)
+    {
+        quotation ??= SelectedQuotation ?? CurrentQuotation;
+        if (quotation is null) return;
+        if (ReferenceEquals(quotation, CurrentQuotation))
+            quotation = PrepareQuotationForPdf();
+        else if (quotation.Id != 0)
+            quotation = await _service.GetAsync(quotation.Id) ?? throw new InvalidOperationException("Quotation was not found.");
+        _calculator.Calculate(quotation);
+        var dialog = new SaveFileDialog
+        {
+            Filter = "PDF document (*.pdf)|*.pdf",
+            FileName = $"Proforma_{SafeFileName(quotation.QuotationNumber)}_{SafeFileName(quotation.CustomerNameSnapshot)}.pdf",
+            InitialDirectory = Directory.Exists(Company.DefaultQuotationPdfFolder) ? Company.DefaultQuotationPdfFolder : null
+        };
+        if (dialog.ShowDialog() != true) return;
+        _pdf.ExportProforma(quotation, Company, dialog.FileName);
+        if (Company.OpenQuotationPdfAfterExport) Open(dialog.FileName);
+        StatusMessage = $"Proforma PDF exported to {dialog.FileName}. No invoice or stock change was made.";
     }
 
     private async Task ExportCsvAsync()

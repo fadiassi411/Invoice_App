@@ -96,6 +96,7 @@ public sealed class MainViewModel : ObservableObject
         SearchCommand = new RelayCommand(SearchCurrentSectionAsync);
         NewInvoiceCommand = new RelayCommand(CreateInvoiceAsync);
         AddInvoiceRowCommand = new RelayCommand(AddInvoiceRowAsync);
+        AddInvoiceServiceCommand = new RelayCommand(AddInvoiceServiceAsync);
         SelectProductCommand = new RelayCommand(SelectProductAsync);
         SelectPriceListForInvoiceCommand = new RelayCommand(SelectPriceListForInvoiceAsync);
         RemoveInvoiceRowCommand = new RelayCommand<InvoiceItem>(RemoveInvoiceRowAsync);
@@ -175,6 +176,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand SearchCommand { get; }
     public ICommand NewInvoiceCommand { get; }
     public ICommand AddInvoiceRowCommand { get; }
+    public ICommand AddInvoiceServiceCommand { get; }
     public ICommand SelectProductCommand { get; }
     public ICommand SelectPriceListForInvoiceCommand { get; }
     public ICommand RemoveInvoiceRowCommand { get; }
@@ -226,7 +228,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ExportProfitReportCommand { get; }
     public ICommand ActivateLicenseCommand { get; }
 
-    public string ApplicationVersion => "1.5.3";
+    public string ApplicationVersion => "1.5.4";
     public string InstallationId => _licenseService.InstallationId;
     public string LicenseStatus => _licenseStatus.IsLicensed ? "Licensed" : "Not licensed";
     public string LicenseCustomer => _licenseStatus.CustomerName ?? "-";
@@ -518,6 +520,21 @@ public sealed class MainViewModel : ObservableObject
     }
 
     private Task AddInvoiceRowAsync() => AddInvoiceRowAsync(null);
+
+    private async Task AddInvoiceServiceAsync()
+    {
+        if (SelectedInvoice is null) await CreateInvoiceAsync();
+        if (SelectedInvoice is null) return;
+        var item = new InvoiceItem
+        {
+            SortOrder = InvoiceItems.Count + 1, Description = "Service / labour", Quantity = 1,
+            Unit = "%", ServicePercentage = 0m, TaxPercentage = Company.DefaultTaxPercentage
+        };
+        SelectedInvoice.Items.Add(item);
+        InvoiceItems.Add(item);
+        RecalculateInvoiceProfit();
+        StatusMessage = "Service / labour added. Enter its percentage of the other items including tax.";
+    }
 
     private async Task AddInvoiceRowAsync(Product? product)
     {

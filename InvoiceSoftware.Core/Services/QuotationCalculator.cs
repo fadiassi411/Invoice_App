@@ -11,7 +11,7 @@ public sealed class QuotationCalculator
         if (decimalPlaces is < 0 or > 6) throw new ArgumentOutOfRangeException(nameof(decimalPlaces));
         if (quotation.Items.Count == 0) throw new InvalidOperationException("Add at least one quotation item.");
 
-        foreach (var item in quotation.Items.OrderBy(x => x.DisplayOrder))
+        foreach (var item in quotation.Items.Where(x => x.ServicePercentage is null).OrderBy(x => x.DisplayOrder))
         {
             if (item.ItemType == QuotationItemType.SectionHeader)
             {
@@ -21,25 +21,19 @@ public sealed class QuotationCalculator
                 continue;
             }
 
-            if (item.Quantity <= 0) throw new InvalidOperationException($"Line {item.LineNumber}: quantity must be greater than zero.");
-            if (item.UnitPrice < 0) throw new InvalidOperationException($"Line {item.LineNumber}: unit price cannot be negative.");
-            if (item.TaxPercentage is < 0 or > 100) throw new InvalidOperationException($"Line {item.LineNumber}: tax must be between 0 and 100.");
+            CalculateLine(item, quotation.TaxMode, decimalPlaces);
+        }
 
-            item.GrossAmount = Round(item.Quantity * item.UnitPrice, decimalPlaces);
-            item.DiscountAmount = item.DiscountType == DiscountType.Percentage
-                ? PercentageDiscount(item, decimalPlaces)
-                : Round(Math.Min(item.GrossAmount, Math.Max(0, item.DiscountValue)), decimalPlaces);
-            item.NetAmount = Round(item.GrossAmount - item.DiscountAmount, decimalPlaces);
-
-            item.TaxAmount = quotation.TaxMode switch
-            {
-                TaxMode.Exempt => 0,
-                TaxMode.Inclusive when item.TaxPercentage > 0 => Round(item.NetAmount - item.NetAmount / (1m + item.TaxPercentage / 100m), decimalPlaces),
-                _ => Round(item.NetAmount * item.TaxPercentage / 100m, decimalPlaces)
-            };
-            item.LineTotal = quotation.TaxMode == TaxMode.Inclusive
-                ? item.NetAmount
-                : Round(item.NetAmount + item.TaxAmount, decimalPlaces);
+        var serviceBase = Round(quotation.Items.Where(x => x.ServicePercentage is null && x.ItemType != QuotationItemType.SectionHeader)
+            .Sum(x => x.LineTotal), decimalPlaces);
+        foreach (var item in quotation.Items.Where(x => x.ServicePercentage is not null))
+        {
+            if (item.ItemType != QuotationItemType.Service || item.StockItemId is not null)
+                throw new InvalidOperationException($"Line {item.LineNumber}: only a service line can use a percentage.");
+            item.Quantity = 1;
+            item.UnitSnapshot = "%";
+            item.UnitPrice = Round(serviceBase * ValidatePercentage(item.ServicePercentage!.Value, $"Line {item.LineNumber} service") / 100m, decimalPlaces);
+            CalculateLine(item, quotation.TaxMode, decimalPlaces);
         }
 
         var chargeableItems = quotation.Items.Where(x => x.ItemType != QuotationItemType.SectionHeader).ToList();
@@ -59,6 +53,25 @@ public sealed class QuotationCalculator
         quotation.AmountInWords = MoneyInWords.Format(quotation.GrandTotal, quotation.CurrencyCode);
 
         return new QuotationTotals(quotation.Subtotal, quotation.DiscountTotal, quotation.NetAmount, quotation.TaxTotal, quotation.GrandTotal);
+    }
+
+    private static void CalculateLine(QuotationItem item, TaxMode taxMode, int decimalPlaces)
+    {
+        if (item.Quantity <= 0) throw new InvalidOperationException($"Line {item.LineNumber}: quantity must be greater than zero.");
+        if (item.UnitPrice < 0) throw new InvalidOperationException($"Line {item.LineNumber}: unit price cannot be negative.");
+        if (item.TaxPercentage is < 0 or > 100) throw new InvalidOperationException($"Line {item.LineNumber}: tax must be between 0 and 100.");
+        item.GrossAmount = Round(item.Quantity * item.UnitPrice, decimalPlaces);
+        item.DiscountAmount = item.DiscountType == DiscountType.Percentage
+            ? PercentageDiscount(item, decimalPlaces)
+            : Round(Math.Min(item.GrossAmount, Math.Max(0, item.DiscountValue)), decimalPlaces);
+        item.NetAmount = Round(item.GrossAmount - item.DiscountAmount, decimalPlaces);
+        item.TaxAmount = taxMode switch
+        {
+            TaxMode.Exempt => 0,
+            TaxMode.Inclusive when item.TaxPercentage > 0 => Round(item.NetAmount - item.NetAmount / (1m + item.TaxPercentage / 100m), decimalPlaces),
+            _ => Round(item.NetAmount * item.TaxPercentage / 100m, decimalPlaces)
+        };
+        item.LineTotal = taxMode == TaxMode.Inclusive ? item.NetAmount : Round(item.NetAmount + item.TaxAmount, decimalPlaces);
     }
 
     private static decimal PercentageDiscount(QuotationItem item, int decimalPlaces)

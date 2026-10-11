@@ -254,6 +254,29 @@ public sealed class QuotationIntegrationTests
     }
 
     [Fact]
+    public async Task Percentage_service_survives_save_revision_and_invoice_conversion()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var quotation = await fixture.Service.CreateDraftAsync(1);
+        quotation.Items.Add(new QuotationItem { DisplayOrder = 1, ItemType = QuotationItemType.ManualItem,
+            ItemReferenceSnapshot = "REF-001", DescriptionSnapshot = "Equipment", Quantity = 1, UnitPrice = 100m, TaxPercentage = 10m });
+        quotation.Items.Add(new QuotationItem { DisplayOrder = 2, ItemType = QuotationItemType.Service,
+            DescriptionSnapshot = "Labour", Quantity = 1, ServicePercentage = 10m, TaxPercentage = 0m });
+        await fixture.Service.SaveAsync(quotation);
+        fixture.Db.ChangeTracker.Clear();
+        var reopened = await fixture.Service.GetAsync(quotation.Id);
+        Assert.Equal(10m, reopened!.Items.Single(x => x.ItemType == QuotationItemType.Service).ServicePercentage);
+        var revision = await fixture.Service.CreateRevisionAsync(quotation.Id);
+        Assert.Equal(10m, revision.Items.Single(x => x.ItemType == QuotationItemType.Service).ServicePercentage);
+        await fixture.Service.ChangeStatusAsync(quotation.Id, QuotationStatus.Sent);
+        await fixture.Service.ChangeStatusAsync(quotation.Id, QuotationStatus.Accepted);
+        var invoice = await fixture.Service.ConvertToInvoiceAsync(quotation.Id);
+        Assert.Equal("REF-001", invoice.Items.Single(x => x.Description == "Equipment").ProductReferenceSnapshot);
+        Assert.Equal(10m, invoice.Items.Single(x => x.Description == "Labour").ServicePercentage);
+        Assert.Equal(quotation.GrandTotal, invoice.GrandTotal);
+    }
+
+    [Fact]
     public async Task Search_filters_and_expiry_status_are_applied()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -287,6 +310,7 @@ public sealed class QuotationIntegrationTests
         {
             var service = new QuotationPdfService(); var calculator = new QuotationCalculator(); var company = new CompanySettings { CompanyName = "Test Company", Currency = "USD" };
             var onePage = QuoteForPdf(2); calculator.Calculate(onePage); var onePath = Path.Combine(folder, "one.pdf"); service.ExportQuotation(onePage, company, onePath);
+            var proformaPath = Path.Combine(folder, "proforma.pdf"); service.ExportProforma(onePage, company, proformaPath);
             var manyPages = QuoteForPdf(75); calculator.Calculate(manyPages); var manyPath = Path.Combine(folder, "many.pdf"); service.ExportQuotation(manyPages, company, manyPath);
             var privatePrices = QuoteForPdf(10);
             privatePrices.HideItemPricesOnPdf = true;
@@ -312,6 +336,7 @@ public sealed class QuotationIntegrationTests
             var hiddenRowPath = Path.Combine(folder, "hidden-row.pdf"); service.ExportQuotation(hiddenRowWithPrices, company, hiddenRowPath);
             Assert.Throws<InvalidOperationException>(() => service.ExportQuotation(new Quotation { GrandTotal = 100 }, company, Path.Combine(folder, "empty.pdf")));
             Assert.True(new FileInfo(onePath).Length > 1_000);
+            Assert.True(new FileInfo(proformaPath).Length > 1_000);
             Assert.True(new FileInfo(manyPath).Length > new FileInfo(onePath).Length);
             Assert.True(new FileInfo(privatePath).Length > 1_000);
             Assert.True(new FileInfo(hiddenRowPath).Length > 1_000);
@@ -321,6 +346,7 @@ public sealed class QuotationIntegrationTests
             {
                 Directory.CreateDirectory(qaFolder);
                 File.Copy(onePath, Path.Combine(qaFolder, "quotation-one-page.pdf"), true);
+                File.Copy(proformaPath, Path.Combine(qaFolder, "proforma-one-page.pdf"), true);
                 File.Copy(manyPath, Path.Combine(qaFolder, "quotation-multi-page.pdf"), true);
                 File.Copy(privatePath, Path.Combine(qaFolder, "quotation-private-prices.pdf"), true);
                 File.Copy(hiddenRowPath, Path.Combine(qaFolder, "quotation-hidden-row-with-prices.pdf"), true);

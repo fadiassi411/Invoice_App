@@ -21,7 +21,7 @@ public sealed class ArabicPdfTests
                 GrandTotal = 50,
                 RemainingBalance = 50,
                 Subtotal = 50,
-                Items = [new InvoiceItem { SortOrder = 1, Description = "مستشعر درجة الحرارة", Quantity = 2, UnitPrice = 25, LineTotal = 50 }]
+                Items = [new InvoiceItem { SortOrder = 1, ProductReferenceSnapshot = "ITEM-0007", Description = "مستشعر درجة الحرارة", Quantity = 2, UnitPrice = 25, LineTotal = 50 }]
             };
             var receipt = new Receipt
             {
